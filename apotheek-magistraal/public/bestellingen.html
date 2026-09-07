@@ -101,6 +101,8 @@
     }
     .reden-badge.ontbrekend { background: #fde2e2; color: #c53030; }
     .reden-badge.speciaal { background: #e0ecfb; color: #2b6cb0; }
+    .reden-badge.klacht { background: #fdf0d5; color: #a16207; }
+    .reden-badge.administratie { background: #e8e6f5; color: #5b3fa8; }
     .hoeveelheid { font-size: 0.82rem; color: #555; font-weight: 600; }
     .notitie { color: #444; margin: 4px 0 0; white-space: pre-wrap; font-size: 0.9rem; }
     .actie-veld { margin-top: 6px; }
@@ -204,6 +206,8 @@
         <select id="new-reden">
           <option value="ontbrekend">Ontbrekend</option>
           <option value="speciaal">Speciaal te bestellen</option>
+          <option value="klacht">Klacht product</option>
+          <option value="administratie">Administratie</option>
         </select>
       </div>
     </div>
@@ -346,7 +350,8 @@
           + (b.cnk ? ` (CNK ${b.cnk})` : "")
           + (b.patient ? ` — ${b.patient}` : "");
         const badge = el.querySelector(".reden-badge");
-        badge.textContent = b.reden === "ontbrekend" ? "Ontbrekend" : "Speciaal";
+        const redenLabels = { ontbrekend: "Ontbrekend", speciaal: "Speciaal", klacht: "Klacht", administratie: "Administratie" };
+        badge.textContent = redenLabels[b.reden] || b.reden;
         badge.classList.add(b.reden);
         el.querySelector(".hoeveelheid").textContent = "Aantal: " + b.hoeveelheid;
         el.querySelector(".notitie").textContent = b.notitie || "";
