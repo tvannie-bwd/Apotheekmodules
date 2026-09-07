@@ -86,8 +86,6 @@ export default async (req) => {
       notitie: body.notitie ?? "",
       actie: "",
       contacteren: body.contacteren ?? false,
-      telefoon: body.telefoon ?? "",
-      email: body.email ?? "",
       gecontacteerd: false,
       klaar: false,
       klaarOp: null,
@@ -122,8 +120,6 @@ export default async (req) => {
       notitie: body.notitie ?? existing.notitie,
       actie: body.actie ?? existing.actie,
       contacteren: body.contacteren ?? existing.contacteren,
-      telefoon: body.telefoon ?? existing.telefoon,
-      email: body.email ?? existing.email,
       gecontacteerd: body.gecontacteerd ?? existing.gecontacteerd,
       klaar: body.klaar ?? existing.klaar,
       klaarOp: wordtNuKlaarGemeld
