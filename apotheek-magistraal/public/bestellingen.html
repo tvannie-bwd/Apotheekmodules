@@ -207,18 +207,6 @@
       <input id="new-contacteren" type="checkbox" style="width:auto;" />
       <label for="new-contacteren" style="margin:0;">Patiënt moet gecontacteerd worden</label>
     </div>
-    <div id="contact-velden" style="display:none;">
-      <div class="row" style="grid-template-columns: 1fr 1fr;">
-        <div>
-          <label for="new-telefoon">Telefoon</label>
-          <input id="new-telefoon" type="tel" placeholder="bv. 0470 12 34 56" />
-        </div>
-        <div>
-          <label for="new-email">E-mail</label>
-          <input id="new-email" type="email" placeholder="bv. naam@voorbeeld.be" />
-        </div>
-      </div>
-    </div>
     <div>
       <label for="new-notitie">Notitie (optioneel)</label>
       <textarea id="new-notitie" placeholder="Bijkomende info..."></textarea>
@@ -357,19 +345,15 @@
 
         if (b.contacteren) {
           const contactPlek = el.querySelector(".contact-plek");
-          const linkjes = [];
-          if (b.telefoon) linkjes.push(`<a href="tel:${b.telefoon.replace(/\s+/g, "")}">📞 ${b.telefoon}</a>`);
-          if (b.email) linkjes.push(`<a href="mailto:${b.email}">✉️ ${b.email}</a>`);
           const checkboxId = `gecontacteerd-${b.id}`;
           contactPlek.innerHTML = `
             <div class="contact-blok">
-              <span>Patiënt contacteren${linkjes.length ? ":" : ""}</span>
-              ${linkjes.join(" ")}
+              <span>Patiënt contacteren</span>
               ${opties.toonActies ? `<label><input type="checkbox" id="${checkboxId}" ${b.gecontacteerd ? "checked" : ""}/> Gecontacteerd</label>` : (b.gecontacteerd ? "<strong>✓ Gecontacteerd</strong>" : "")}
             </div>
           `;
           if (opties.toonActies) {
-            document.getElementById(checkboxId).addEventListener("change", (e) => bewaarGecontacteerd(b.id, e.target.checked));
+            contactPlek.querySelector('input[type="checkbox"]').addEventListener("change", (e) => bewaarGecontacteerd(b.id, e.target.checked));
           }
         }
         el.querySelector(".meta").textContent = opties.toonActies
@@ -431,8 +415,6 @@
       const patient = document.getElementById("new-patient").value.trim();
       const notitie = document.getElementById("new-notitie").value.trim();
       const contacteren = document.getElementById("new-contacteren").checked;
-      const telefoon = document.getElementById("new-telefoon").value.trim();
-      const email = document.getElementById("new-email").value.trim();
 
       if (!productnaam) {
         setStatus("Productnaam is verplicht.");
@@ -443,7 +425,7 @@
         const res = await apiFetch(API, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ productnaam, cnk, hoeveelheid, reden, patient, notitie, contacteren, telefoon, email }),
+          body: JSON.stringify({ productnaam, cnk, hoeveelheid, reden, patient, notitie, contacteren }),
         });
         if (!res.ok) throw new Error(await res.text());
         const nieuw = await res.json();
@@ -460,9 +442,6 @@
         document.getElementById("new-patient").value = "";
         document.getElementById("new-notitie").value = "";
         document.getElementById("new-contacteren").checked = false;
-        document.getElementById("new-telefoon").value = "";
-        document.getElementById("new-email").value = "";
-        document.getElementById("contact-velden").style.display = "none";
 
         herbevestigOnbevestigd();
       } catch (err) {
@@ -560,9 +539,6 @@
     }
 
     document.getElementById("add-btn").addEventListener("click", voegBestellingToe);
-    document.getElementById("new-contacteren").addEventListener("change", (e) => {
-      document.getElementById("contact-velden").style.display = e.target.checked ? "block" : "none";
-    });
 
     // ---- Login (identiek aan Magistraal, zelfde accounts) ----
     const PIN_LENGTE = 4;
