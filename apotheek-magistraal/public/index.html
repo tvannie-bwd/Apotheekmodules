@@ -473,16 +473,25 @@
       return new Date(isoDateTime) < new Date();
     }
 
-    async function loadBereidingen() {
-      setStatus("Bezig met laden...");
+    let huidigeData = {
+      patientOpenstaand: [], patientGeschiedenis: [],
+      voorraadOpenstaand: [], voorraadGeschiedenis: [],
+    };
+
+    function renderAlles() {
+      renderLijst("patient-openstaand-list", "patient-openstaand-empty", huidigeData.patientOpenstaand, { toonActies: true, aangemaakt: true, labelPrefix: "Afhaling: ", toonVerlopen: true });
+      renderLijst("patient-geschiedenis-list", "patient-geschiedenis-empty", huidigeData.patientGeschiedenis, { toonActies: false, aangemaakt: false, labelPrefix: "Afhaling: ", toonVerlopen: false });
+      renderLijst("voorraad-openstaand-list", "voorraad-openstaand-empty", huidigeData.voorraadOpenstaand, { toonActies: true, aangemaakt: false, labelPrefix: "Geregistreerd: ", toonVerlopen: false });
+      renderLijst("voorraad-geschiedenis-list", "voorraad-geschiedenis-empty", huidigeData.voorraadGeschiedenis, { toonActies: false, aangemaakt: false, labelPrefix: "Geregistreerd: ", toonVerlopen: false });
+    }
+
+    async function loadBereidingen(stil = false) {
+      if (!stil) setStatus("Bezig met laden...");
       try {
         const res = await apiFetch(`${API}?_=${Date.now()}`);
         if (!res.ok) throw new Error(await res.text());
-        const data = await res.json();
-        renderLijst("patient-openstaand-list", "patient-openstaand-empty", data.patientOpenstaand, { toonActies: true, aangemaakt: true, labelPrefix: "Afhaling: ", toonVerlopen: true });
-        renderLijst("patient-geschiedenis-list", "patient-geschiedenis-empty", data.patientGeschiedenis, { toonActies: false, aangemaakt: false, labelPrefix: "Afhaling: ", toonVerlopen: false });
-        renderLijst("voorraad-openstaand-list", "voorraad-openstaand-empty", data.voorraadOpenstaand, { toonActies: true, aangemaakt: false, labelPrefix: "Geregistreerd: ", toonVerlopen: false });
-        renderLijst("voorraad-geschiedenis-list", "voorraad-geschiedenis-empty", data.voorraadGeschiedenis, { toonActies: false, aangemaakt: false, labelPrefix: "Geregistreerd: ", toonVerlopen: false });
+        huidigeData = await res.json();
+        renderAlles();
         setStatus("Bijgewerkt om " + new Date().toLocaleTimeString());
       } catch (err) {
         setStatus("Fout bij laden: " + err.message);
@@ -572,10 +581,23 @@
           body: JSON.stringify(body),
         });
         if (!res.ok) throw new Error(await res.text());
+        const nieuweBereiding = await res.json();
+
+        // Meteen lokaal tonen, niet wachten op een nieuwe lijst van de
+        // server (die kan door Netlify Blobs eventjes vertraagd zijn).
+        const lijstNaam = type === "patient" ? "patientOpenstaand" : "voorraadOpenstaand";
+        huidigeData[lijstNaam] = [...huidigeData[lijstNaam], nieuweBereiding]
+          .sort((a, b) => (a.datumAfhaling ?? "").localeCompare(b.datumAfhaling ?? ""));
+        renderAlles();
+        setStatus(type === "patient" ? "Bereiding toegevoegd." : "Voorraadbereiding toegevoegd.");
+
         document.getElementById(`${prefix}-naam`).value = "";
         document.getElementById(`${prefix}-notitie`).value = "";
         if (type === "patient") vulStandaardDatumTijdIn("patient");
-        await loadBereidingen();
+
+        // Stille controle-herlaad na een paar seconden, zodat alles
+        // uiteindelijk toch weer 100% overeenkomt met de server.
+        setTimeout(() => loadBereidingen(true), 2500);
       } catch (err) {
         setStatus("Fout bij opslaan: " + err.message);
       }
