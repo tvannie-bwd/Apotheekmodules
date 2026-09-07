@@ -1,22 +1,3 @@
-# Apotheek — Magistraal & Speciale bestellingen
-
-Dit project bevat twee modules die dezelfde login/apotheek-accounts delen:
-
-- **Magistraal** (`public/index.html`, `netlify/functions/magistraal.js`):
-  patiëntgebonden en voorraad-bereidingen, zie verder in dit document.
-- **Speciale bestellingen** (`public/bestellingen.html`, `netlify/functions/bestellingen.js`):
-  ontbrekende en/of speciaal te bestellen producten. Registratie met
-  productnaam, aantal, reden (ontbrekend / speciaal te bestellen),
-  optionele patiëntnaam en notitie. Zelfde opbouw als Magistraal:
-  formulier → Openstaand (oudste eerst) → Bestellingenboek (geschiedenis),
-  met dezelfde afdruk- en leegmaak-functionaliteit.
-
-Beide modules gebruiken **dezelfde login** (`/api/login`, `/api/register`,
-dezelfde `apotheek-accounts`-store) — eenmaal aanmelden op één van de twee
-pagina's, en de andere pagina herkent je automatisch (want beide bewaren het
-token onder dezelfde sleutel in `localStorage`). Bovenaan elke pagina staat
-een link naar de andere module.
-
 # Module 1 — Magistraal
 
 Registratie en opvolging van magistrale bereidingen, in twee tabbladen:

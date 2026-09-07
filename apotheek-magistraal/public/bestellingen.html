@@ -1,0 +1,710 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Speciale bestellingen</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 760px;
+      margin: 40px auto;
+      padding: 0 16px;
+      color: #1a1a1a;
+    }
+    h1 { font-size: 1.4rem; margin-bottom: 4px; }
+    h2 { font-size: 1.05rem; margin: 24px 0 8px; color: #333; }
+    p.subtitle { color: #666; margin-top: 0; }
+    a.module-link { font-size: 0.85rem; color: #2b6cb0; }
+
+    .formulier {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+      display: grid;
+      gap: 8px;
+    }
+    .formulier .row {
+      display: grid;
+      grid-template-columns: 1.3fr 0.9fr 0.6fr 1.1fr;
+      gap: 8px;
+    }
+    label { font-size: 0.85rem; color: #555; margin-bottom: 2px; display: block; }
+    input, textarea, select {
+      width: 100%;
+      font-family: inherit;
+      font-size: 1rem;
+      padding: 8px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: white;
+    }
+    textarea { min-height: 60px; resize: vertical; }
+
+    button {
+      padding: 8px 16px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #f5f5f5;
+    }
+    button.primary { background: #2b6cb0; color: white; border-color: #2b6cb0; }
+    button.danger { background: #fff; color: #c53030; border-color: #c53030; }
+
+    .print-btn { font-size: 0.85rem; margin-left: 8px; }
+    .clear-banner {
+      background: #eaf3ff;
+      border: 1px solid #90b8e0;
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-bottom: 10px;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .clear-banner button { font-size: 0.85rem; padding: 4px 10px; }
+
+    .bestelling {
+      border: 1px solid #e2e2e2;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .bestelling input[type="checkbox"] {
+      width: auto;
+      margin-top: 3px;
+      transform: scale(1.15);
+      cursor: pointer;
+    }
+    .bestelling-body { flex: 1; }
+    .bestelling-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .item-naam { font-weight: 600; font-size: 0.95rem; }
+    .reden-badge {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 12px;
+      text-transform: uppercase;
+    }
+    .reden-badge.ontbrekend { background: #fde2e2; color: #c53030; }
+    .reden-badge.speciaal { background: #e0ecfb; color: #2b6cb0; }
+    .hoeveelheid { font-size: 0.82rem; color: #555; font-weight: 600; }
+    .notitie { color: #444; margin: 4px 0 0; white-space: pre-wrap; font-size: 0.9rem; }
+    .actie-veld { margin-top: 6px; }
+    .actie-veld label { font-size: 0.78rem; color: #2b6cb0; font-weight: 600; margin-bottom: 2px; }
+    .actie-veld textarea {
+      min-height: 40px; font-size: 0.88rem; padding: 6px;
+      border: 1px solid #cfe0f5; border-radius: 4px; background: #f7fafd;
+    }
+    .actie-tekst { color: #2b6cb0; font-size: 0.88rem; margin-top: 4px; white-space: pre-wrap; }
+    .actie-tekst strong { font-weight: 600; }
+    .contact-blok {
+      margin-top: 6px; padding: 6px 8px; background: #fff8e1; border: 1px solid #f0d78c;
+      border-radius: 4px; font-size: 0.85rem; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .contact-blok a { color: #7a5c00; font-weight: 600; }
+    .contact-blok label { display: flex; align-items: center; gap: 4px; margin: 0; color: #7a5c00; }
+    .contact-blok input[type="checkbox"] { width: auto; }
+    .meta { font-size: 0.74rem; color: #999; margin-top: 4px; }
+    .bestelling-actions { margin-top: 6px; }
+
+    #status { font-size: 0.9rem; color: #555; margin-bottom: 16px; min-height: 1.2em; }
+    .empty { color: #888; font-style: italic; }
+
+    .pin-dot {
+      width: 18px; height: 18px; border-radius: 50%;
+      border: 2px solid #2b6cb0; background: transparent; transition: background 0.15s;
+    }
+    .pin-dot.gevuld { background: #2b6cb0; }
+    .pin-toets {
+      font-size: 1.3rem; padding: 14px 0; border: 1px solid #ccc;
+      border-radius: 6px; background: #f5f5f5; cursor: pointer;
+    }
+    .pin-toets:active { background: #e2e2e2; }
+
+    @media print {
+      .tabs, .formulier, #status, .print-btn, .clear-banner, a.module-link { display: none !important; }
+      .heading-openstaand, #openstaand-list, #openstaand-empty { display: none !important; }
+      input[type="checkbox"], .bestelling-actions { display: none !important; }
+      .bestelling { break-inside: avoid; border-color: #999; }
+      p.subtitle { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div id="login-overlay" style="position:fixed; inset:0; background:rgba(255,255,255,0.97); display:flex; align-items:center; justify-content:center; z-index:1000;">
+    <div style="max-width:340px; width:100%; padding:24px; border:1px solid #ddd; border-radius:8px; text-align:center;">
+      <h2 style="margin-top:0;">Aanmelden</h2>
+
+      <div style="display:flex; gap:4px; margin-bottom:12px; border-bottom:1px solid #ddd;">
+        <button class="login-tab active" data-mode="login" style="flex:1; padding:8px; border:none; background:none; border-bottom:2px solid #2b6cb0; color:#2b6cb0; font-weight:600; cursor:pointer;">Inloggen</button>
+        <button class="login-tab" data-mode="register" style="flex:1; padding:8px; border:none; background:none; border-bottom:2px solid transparent; color:#555; cursor:pointer;">Nieuwe apotheek</button>
+      </div>
+
+      <div style="text-align:left; margin-bottom:8px;">
+        <label for="login-apotheeknaam">Naam van je apotheek</label>
+        <input id="login-apotheeknaam" type="text" placeholder="bv. Apotheek Peeters" />
+      </div>
+
+      <div id="veld-uitnodigingscode" style="text-align:left; margin-bottom:8px; display:none;">
+        <label for="register-uitnodigingscode">Uitnodigingscode</label>
+        <input id="register-uitnodigingscode" type="text" placeholder="Code die je van mij kreeg" />
+      </div>
+
+      <p style="font-size:0.9rem; color:#666; margin-bottom:4px;">Code</p>
+      <div id="pin-dots" style="display:flex; justify-content:center; gap:12px; margin-bottom:16px;"></div>
+      <div id="pin-keypad" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:8px;"></div>
+      <p id="login-fout" style="color:#c53030; font-size:0.85rem; min-height:1.2em; margin-bottom:0;"></p>
+    </div>
+  </div>
+
+  <h1>Speciale bestellingen</h1>
+  <p class="subtitle" id="aangemeld-als" style="display:none;"></p>
+  <p class="subtitle"><a class="module-link" href="/">← Naar Magistraal</a></p>
+
+  <div id="status"></div>
+
+  <div class="formulier">
+    <div class="row">
+      <div>
+        <label for="new-productnaam">Productnaam</label>
+        <input id="new-productnaam" type="text" placeholder="Naam van het product" />
+      </div>
+      <div>
+        <label for="new-cnk">CNK (optioneel)</label>
+        <input id="new-cnk" type="text" placeholder="bv. 1234567" inputmode="numeric" />
+      </div>
+      <div>
+        <label for="new-hoeveelheid">Aantal</label>
+        <input id="new-hoeveelheid" type="number" min="1" value="1" />
+      </div>
+      <div>
+        <label for="new-reden">Reden</label>
+        <select id="new-reden">
+          <option value="ontbrekend">Ontbrekend</option>
+          <option value="speciaal">Speciaal te bestellen</option>
+        </select>
+      </div>
+    </div>
+    <div>
+      <label for="new-patient">Naam patiënt (optioneel)</label>
+      <input id="new-patient" type="text" placeholder="Enkel invullen indien voor een specifieke patiënt" />
+    </div>
+    <div style="display:flex; align-items:center; gap:6px;">
+      <input id="new-contacteren" type="checkbox" style="width:auto;" />
+      <label for="new-contacteren" style="margin:0;">Patiënt moet gecontacteerd worden</label>
+    </div>
+    <div id="contact-velden" style="display:none;">
+      <div class="row" style="grid-template-columns: 1fr 1fr;">
+        <div>
+          <label for="new-telefoon">Telefoon</label>
+          <input id="new-telefoon" type="tel" placeholder="bv. 0470 12 34 56" />
+        </div>
+        <div>
+          <label for="new-email">E-mail</label>
+          <input id="new-email" type="email" placeholder="bv. naam@voorbeeld.be" />
+        </div>
+      </div>
+    </div>
+    <div>
+      <label for="new-notitie">Notitie (optioneel)</label>
+      <textarea id="new-notitie" placeholder="Bijkomende info..."></textarea>
+    </div>
+    <button class="primary" id="add-btn">Toevoegen</button>
+  </div>
+
+  <h2 class="heading-openstaand">Openstaand</h2>
+  <div id="openstaand-list"></div>
+  <p class="empty" id="openstaand-empty" style="display:none;">Geen openstaande bestellingen.</p>
+
+  <h2>Bestellingenboek <button class="print-btn" onclick="afdrukken()">Afdrukken</button></h2>
+  <div id="clear-banner" class="clear-banner" style="display:none;">
+    Bestellingenboek afgedrukt. Nu leegmaken?
+    <button class="primary" onclick="leegBestellingenboek()">Ja, leegmaken</button>
+    <button onclick="verbergLeegBanner()">Nee, laten staan</button>
+  </div>
+  <div id="geschiedenis-list"></div>
+  <p class="empty" id="geschiedenis-empty" style="display:none;">Nog geen bestellingen afgewerkt.</p>
+
+  <script>
+    const API = "/api/bestellingen";
+    const status = document.getElementById("status");
+    let sessieToken = localStorage.getItem("magistraal-token"); // gedeeld met Magistraal
+
+    function setStatus(msg) { status.textContent = msg; }
+
+    async function apiFetch(url, options = {}) {
+      const headers = { ...(options.headers || {}), Authorization: `Bearer ${sessieToken}` };
+      const res = await fetch(url, { ...options, headers, cache: "no-store" });
+      if (res.status === 401) {
+        localStorage.removeItem("magistraal-token");
+        localStorage.removeItem("magistraal-apotheeknaam");
+        sessieToken = null;
+        toonAangemeldAls(null);
+        toonLoginOverlay(true);
+        throw new Error("Sessie verlopen, gelieve opnieuw aan te melden.");
+      }
+      return res;
+    }
+
+    function formatDatumTijd(iso) {
+      if (!iso) return "";
+      return new Date(iso).toLocaleString("nl-BE", {
+        day: "2-digit", month: "2-digit", year: "numeric",
+        hour: "2-digit", minute: "2-digit",
+      });
+    }
+
+    let herbevestigBezig = false;
+
+    async function herbevestigOnbevestigd() {
+      if (herbevestigBezig) return;
+      herbevestigBezig = true;
+      const tussenpozen = [2000, 3000, 4000, 5000, 6000];
+      for (const wachttijd of tussenpozen) {
+        if (onbevestigd.length === 0) break;
+        await new Promise((r) => setTimeout(r, wachttijd));
+        if (onbevestigd.length === 0) break;
+        await loadBestellingen(true);
+      }
+      herbevestigBezig = false;
+    }
+
+    let huidigeData = { openstaand: [], geschiedenis: [] };
+    let onbevestigd = [];
+
+    function renderAlles() {
+      renderLijst("openstaand-list", "openstaand-empty", huidigeData.openstaand, { toonActies: true });
+      renderLijst("geschiedenis-list", "geschiedenis-empty", huidigeData.geschiedenis, { toonActies: false });
+    }
+
+    async function loadBestellingen(stil = false) {
+      if (!stil) setStatus("Bezig met laden...");
+      try {
+        const res = await apiFetch(`${API}?_=${Date.now()}`);
+        if (!res.ok) throw new Error(await res.text());
+        const vers = await res.json();
+
+        onbevestigd = onbevestigd.filter((o) => {
+          const aanwezig = vers[o.lijstNaam].some((x) => x.id === o.item.id);
+          if (!aanwezig) {
+            vers[o.lijstNaam] = [...vers[o.lijstNaam], o.item]
+              .sort((a, b) => (a.aangemaakt ?? "").localeCompare(b.aangemaakt ?? ""));
+          }
+          return !aanwezig;
+        });
+
+        huidigeData = vers;
+        renderAlles();
+        setStatus("Bijgewerkt om " + new Date().toLocaleTimeString());
+      } catch (err) {
+        setStatus("Fout bij laden: " + err.message);
+      }
+    }
+
+    function renderLijst(containerId, emptyId, lijst, opties) {
+      const container = document.getElementById(containerId);
+      const empty = document.getElementById(emptyId);
+      container.innerHTML = "";
+      empty.style.display = lijst.length === 0 ? "block" : "none";
+      for (const b of lijst) {
+        const el = document.createElement("div");
+        el.className = "bestelling";
+        el.dataset.id = b.id;
+        const checkboxAttrs = opties.toonActies ? "" : "checked";
+        el.innerHTML = `
+          <input type="checkbox" ${checkboxAttrs} title="${opties.toonActies ? "Markeer als besteld/ontvangen" : "Terugzetten naar openstaand"}" />
+          <div class="bestelling-body">
+            <div class="bestelling-header">
+              <span class="item-naam"></span>
+              <span class="reden-badge"></span>
+              <span class="hoeveelheid"></span>
+            </div>
+            <div class="notitie"></div>
+            <div class="contact-plek"></div>
+            ${opties.toonActies
+              ? `<div class="actie-veld">
+                   <label>Actie ondernomen</label>
+                   <textarea placeholder="bv. nabesteld bij groothandel X, telefonisch gecontacteerd..."></textarea>
+                 </div>`
+              : `<div class="actie-tekst"></div>`
+            }
+            <div class="meta"></div>
+            ${opties.toonActies ? '<div class="bestelling-actions"><button class="danger delete-btn">Verwijderen</button></div>' : ""}
+          </div>
+        `;
+        el.querySelector(".item-naam").textContent = b.productnaam
+          + (b.cnk ? ` (CNK ${b.cnk})` : "")
+          + (b.patient ? ` — ${b.patient}` : "");
+        const badge = el.querySelector(".reden-badge");
+        badge.textContent = b.reden === "ontbrekend" ? "Ontbrekend" : "Speciaal";
+        badge.classList.add(b.reden);
+        el.querySelector(".hoeveelheid").textContent = "Aantal: " + b.hoeveelheid;
+        el.querySelector(".notitie").textContent = b.notitie || "";
+
+        if (b.contacteren) {
+          const contactPlek = el.querySelector(".contact-plek");
+          const linkjes = [];
+          if (b.telefoon) linkjes.push(`<a href="tel:${b.telefoon.replace(/\s+/g, "")}">📞 ${b.telefoon}</a>`);
+          if (b.email) linkjes.push(`<a href="mailto:${b.email}">✉️ ${b.email}</a>`);
+          const checkboxId = `gecontacteerd-${b.id}`;
+          contactPlek.innerHTML = `
+            <div class="contact-blok">
+              <span>Patiënt contacteren${linkjes.length ? ":" : ""}</span>
+              ${linkjes.join(" ")}
+              ${opties.toonActies ? `<label><input type="checkbox" id="${checkboxId}" ${b.gecontacteerd ? "checked" : ""}/> Gecontacteerd</label>` : (b.gecontacteerd ? "<strong>✓ Gecontacteerd</strong>" : "")}
+            </div>
+          `;
+          if (opties.toonActies) {
+            document.getElementById(checkboxId).addEventListener("change", (e) => bewaarGecontacteerd(b.id, e.target.checked));
+          }
+        }
+        el.querySelector(".meta").textContent = opties.toonActies
+          ? "Geregistreerd: " + formatDatumTijd(b.aangemaakt)
+          : "Afgewerkt: " + formatDatumTijd(b.klaarOp);
+
+        if (opties.toonActies) {
+          const actieVeld = el.querySelector(".actie-veld textarea");
+          actieVeld.value = b.actie || "";
+          actieVeld.addEventListener("blur", () => bewaarActie(b.id, actieVeld.value));
+          el.querySelector('input[type="checkbox"]').addEventListener("change", () => markeerKlaar(b.id));
+          koppelVerwijderKnop(el.querySelector(".delete-btn"), b.id);
+        } else {
+          const actieTekst = el.querySelector(".actie-tekst");
+          actieTekst.innerHTML = b.actie ? `<strong>Actie:</strong> ${b.actie.replace(/</g, "&lt;")}` : "";
+          el.querySelector('input[type="checkbox"]').addEventListener("change", () => heropenBestelling(b.id));
+        }
+        container.appendChild(el);
+      }
+    }
+
+    async function bewaarActie(id, actie) {
+      try {
+        const res = await apiFetch(`${API}?id=${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ actie }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const item = huidigeData.openstaand.find((x) => x.id === id);
+        if (item) item.actie = actie;
+        setStatus("Actie bewaard.");
+      } catch (err) {
+        setStatus("Fout bij bewaren van actie: " + err.message);
+      }
+    }
+
+    async function bewaarGecontacteerd(id, gecontacteerd) {
+      try {
+        const res = await apiFetch(`${API}?id=${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ gecontacteerd }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const item = huidigeData.openstaand.find((x) => x.id === id);
+        if (item) item.gecontacteerd = gecontacteerd;
+        setStatus(gecontacteerd ? "Gemarkeerd als gecontacteerd." : "Markering ongedaan gemaakt.");
+      } catch (err) {
+        setStatus("Fout bij bewaren: " + err.message);
+      }
+    }
+
+    async function voegBestellingToe() {
+      const productnaam = document.getElementById("new-productnaam").value.trim();
+      const cnk = document.getElementById("new-cnk").value.trim();
+      const hoeveelheid = parseInt(document.getElementById("new-hoeveelheid").value, 10) || 1;
+      const reden = document.getElementById("new-reden").value;
+      const patient = document.getElementById("new-patient").value.trim();
+      const notitie = document.getElementById("new-notitie").value.trim();
+      const contacteren = document.getElementById("new-contacteren").checked;
+      const telefoon = document.getElementById("new-telefoon").value.trim();
+      const email = document.getElementById("new-email").value.trim();
+
+      if (!productnaam) {
+        setStatus("Productnaam is verplicht.");
+        return;
+      }
+      setStatus("Bezig met opslaan...");
+      try {
+        const res = await apiFetch(API, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productnaam, cnk, hoeveelheid, reden, patient, notitie, contacteren, telefoon, email }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const nieuw = await res.json();
+
+        huidigeData.openstaand = [...huidigeData.openstaand, nieuw]
+          .sort((a, b) => (a.aangemaakt ?? "").localeCompare(b.aangemaakt ?? ""));
+        onbevestigd.push({ item: nieuw, lijstNaam: "openstaand" });
+        renderAlles();
+        setStatus("Toegevoegd.");
+
+        document.getElementById("new-productnaam").value = "";
+        document.getElementById("new-cnk").value = "";
+        document.getElementById("new-hoeveelheid").value = "1";
+        document.getElementById("new-patient").value = "";
+        document.getElementById("new-notitie").value = "";
+        document.getElementById("new-contacteren").checked = false;
+        document.getElementById("new-telefoon").value = "";
+        document.getElementById("new-email").value = "";
+        document.getElementById("contact-velden").style.display = "none";
+
+        herbevestigOnbevestigd();
+      } catch (err) {
+        setStatus("Fout bij opslaan: " + err.message);
+      }
+    }
+
+    async function markeerKlaar(id) {
+      setStatus("Bezig met bijwerken...");
+      try {
+        const res = await apiFetch(`${API}?id=${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ klaar: true }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        await loadBestellingen();
+      } catch (err) {
+        setStatus("Fout bij bijwerken: " + err.message);
+      }
+    }
+
+    async function heropenBestelling(id) {
+      setStatus("Bezig met bijwerken...");
+      try {
+        const res = await apiFetch(`${API}?id=${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ klaar: false }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        await loadBestellingen();
+      } catch (err) {
+        setStatus("Fout bij bijwerken: " + err.message);
+      }
+    }
+
+    async function verwijderBestelling(id) {
+      setStatus("Bezig met verwijderen...");
+      try {
+        const res = await apiFetch(`${API}?id=${id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error(await res.text());
+        await loadBestellingen();
+      } catch (err) {
+        setStatus("Fout bij verwijderen: " + err.message);
+      }
+    }
+
+    function koppelVerwijderKnop(button, id) {
+      let bevestigen = false;
+      let timeoutId;
+      button.addEventListener("click", () => {
+        if (!bevestigen) {
+          bevestigen = true;
+          button.textContent = "Zeker? Klik opnieuw";
+          timeoutId = setTimeout(() => {
+            bevestigen = false;
+            button.textContent = "Verwijderen";
+          }, 3000);
+        } else {
+          clearTimeout(timeoutId);
+          verwijderBestelling(id);
+        }
+      });
+    }
+
+    let laatsteAfdrukType = null;
+    function afdrukken() {
+      laatsteAfdrukType = true;
+      window.print();
+    }
+    window.addEventListener("afterprint", () => {
+      if (laatsteAfdrukType) {
+        document.getElementById("clear-banner").style.display = "flex";
+        laatsteAfdrukType = null;
+      }
+    });
+    function verbergLeegBanner() {
+      document.getElementById("clear-banner").style.display = "none";
+    }
+    async function leegBestellingenboek() {
+      verbergLeegBanner();
+      const idsLijst = Array.from(document.getElementById("geschiedenis-list").children).map((el) => el.dataset.id);
+      setStatus("Bezig met leegmaken...");
+      try {
+        for (const id of idsLijst) {
+          const res = await apiFetch(`${API}?id=${id}`, { method: "DELETE" });
+          if (!res.ok) throw new Error(await res.text());
+        }
+        await loadBestellingen();
+        setStatus("Bestellingenboek geleegd.");
+      } catch (err) {
+        setStatus("Fout bij leegmaken: " + err.message);
+      }
+    }
+
+    document.getElementById("add-btn").addEventListener("click", voegBestellingToe);
+    document.getElementById("new-contacteren").addEventListener("change", (e) => {
+      document.getElementById("contact-velden").style.display = e.target.checked ? "block" : "none";
+    });
+
+    // ---- Login (identiek aan Magistraal, zelfde accounts) ----
+    const PIN_LENGTE = 4;
+    let ingevoerdeCode = "";
+    let loginModus = "login";
+
+    function toonLoginOverlay(tonen) {
+      document.getElementById("login-overlay").style.display = tonen ? "flex" : "none";
+    }
+
+    function toonAangemeldAls(apotheeknaam) {
+      const el = document.getElementById("aangemeld-als");
+      if (sessieToken) {
+        el.innerHTML = apotheeknaam
+          ? `Aangemeld als: <strong>${apotheeknaam}</strong> — <a href="#" id="uitloggen-link">uitloggen</a>`
+          : `Aangemeld — <a href="#" id="uitloggen-link">uitloggen</a>`;
+        el.style.display = "block";
+        document.getElementById("uitloggen-link").addEventListener("click", (e) => {
+          e.preventDefault();
+          uitloggen();
+        });
+      } else {
+        el.style.display = "none";
+      }
+    }
+
+    function uitloggen() {
+      localStorage.removeItem("magistraal-token");
+      localStorage.removeItem("magistraal-apotheeknaam");
+      sessieToken = null;
+      toonAangemeldAls(null);
+      toonLoginOverlay(true);
+    }
+
+    document.querySelectorAll(".login-tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".login-tab").forEach((t) => {
+          t.classList.remove("active");
+          t.style.borderBottomColor = "transparent";
+          t.style.color = "#555";
+          t.style.fontWeight = "normal";
+        });
+        tab.classList.add("active");
+        tab.style.borderBottomColor = "#2b6cb0";
+        tab.style.color = "#2b6cb0";
+        tab.style.fontWeight = "600";
+        loginModus = tab.dataset.mode;
+        document.getElementById("veld-uitnodigingscode").style.display = loginModus === "register" ? "block" : "none";
+        document.getElementById("login-fout").textContent = "";
+      });
+    });
+
+    function tekenPinDots() {
+      const container = document.getElementById("pin-dots");
+      container.innerHTML = "";
+      for (let i = 0; i < PIN_LENGTE; i++) {
+        const dot = document.createElement("div");
+        dot.className = "pin-dot" + (i < ingevoerdeCode.length ? " gevuld" : "");
+        container.appendChild(dot);
+      }
+    }
+
+    function tekenPinKeypad() {
+      const container = document.getElementById("pin-keypad");
+      container.innerHTML = "";
+      const toetsen = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "wis", "0", "⌫"];
+      for (const t of toetsen) {
+        const btn = document.createElement("button");
+        btn.className = "pin-toets";
+        btn.textContent = t === "wis" ? "Wis" : t;
+        btn.addEventListener("click", () => {
+          if (t === "⌫") ingevoerdeCode = ingevoerdeCode.slice(0, -1);
+          else if (t === "wis") ingevoerdeCode = "";
+          else if (ingevoerdeCode.length < PIN_LENGTE) ingevoerdeCode += t;
+          tekenPinDots();
+          document.getElementById("login-fout").textContent = "";
+          if (ingevoerdeCode.length === PIN_LENGTE) probeerInloggen();
+        });
+        container.appendChild(btn);
+      }
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (document.getElementById("login-overlay").style.display === "none") return;
+      if (document.activeElement && document.activeElement.tagName === "INPUT") return;
+      if (e.key >= "0" && e.key <= "9" && ingevoerdeCode.length < PIN_LENGTE) {
+        ingevoerdeCode += e.key;
+        tekenPinDots();
+        if (ingevoerdeCode.length === PIN_LENGTE) probeerInloggen();
+      } else if (e.key === "Backspace") {
+        ingevoerdeCode = ingevoerdeCode.slice(0, -1);
+        tekenPinDots();
+      }
+    });
+
+    async function probeerInloggen() {
+      const foutVeld = document.getElementById("login-fout");
+      foutVeld.textContent = "";
+      const apotheeknaam = document.getElementById("login-apotheeknaam").value.trim();
+      if (!apotheeknaam) {
+        foutVeld.textContent = "Naam van de apotheek is verplicht.";
+        return;
+      }
+      const eindpunt = loginModus === "register" ? "/api/register" : "/api/login";
+      const body = loginModus === "register"
+        ? { uitnodigingscode: document.getElementById("register-uitnodigingscode").value.trim(), apotheeknaam, code: ingevoerdeCode }
+        : { apotheeknaam, code: ingevoerdeCode };
+      try {
+        const res = await fetch(eindpunt, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          foutVeld.textContent = data.error || "Aanmelden mislukt.";
+          ingevoerdeCode = "";
+          tekenPinDots();
+          return;
+        }
+        sessieToken = data.token;
+        localStorage.setItem("magistraal-token", sessieToken);
+        localStorage.setItem("magistraal-apotheeknaam", data.apotheeknaam || apotheeknaam);
+        toonAangemeldAls(data.apotheeknaam || apotheeknaam);
+        toonLoginOverlay(false);
+        loadBestellingen();
+      } catch (err) {
+        foutVeld.textContent = "Fout bij aanmelden: " + err.message;
+        ingevoerdeCode = "";
+        tekenPinDots();
+      }
+    }
+
+    tekenPinKeypad();
+    tekenPinDots();
+    if (sessieToken) {
+      toonAangemeldAls(localStorage.getItem("magistraal-apotheeknaam"));
+      toonLoginOverlay(false);
+      loadBestellingen();
+    } else {
+      toonLoginOverlay(true);
+    }
+  </script>
+</body>
+</html>

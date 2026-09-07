@@ -186,7 +186,6 @@
 
   <h1>Magistraal</h1>
   <p class="subtitle" id="aangemeld-als" style="display:none;"></p>
-  <p class="subtitle"><a href="/bestellingen.html" style="font-size:0.85rem; color:#2b6cb0;">→ Naar Speciale bestellingen</a></p>
   <p class="subtitle">Bereidingen registreren en opvolgen tot afhaling</p>
 
   <div id="status"></div>
@@ -474,26 +473,10 @@
       return new Date(isoDateTime) < new Date();
     }
 
-    let herbevestigBezig = false;
-
-    async function herbevestigOnbevestigd() {
-      if (herbevestigBezig) return; // al een controle-lus bezig
-      herbevestigBezig = true;
-      const tussenpozen = [2000, 3000, 4000, 5000, 6000]; // oplopend, max ~20s totaal
-      for (const wachttijd of tussenpozen) {
-        if (onbevestigd.length === 0) break;
-        await new Promise((r) => setTimeout(r, wachttijd));
-        if (onbevestigd.length === 0) break;
-        await loadBereidingen(true);
-      }
-      herbevestigBezig = false;
-    }
-
     let huidigeData = {
       patientOpenstaand: [], patientGeschiedenis: [],
       voorraadOpenstaand: [], voorraadGeschiedenis: [],
     };
-    let onbevestigd = []; // items die lokaal al getoond worden, maar nog niet bevestigd zijn door de server
 
     function renderAlles() {
       renderLijst("patient-openstaand-list", "patient-openstaand-empty", huidigeData.patientOpenstaand, { toonActies: true, aangemaakt: true, labelPrefix: "Afhaling: ", toonVerlopen: true });
@@ -507,21 +490,7 @@
       try {
         const res = await apiFetch(`${API}?_=${Date.now()}`);
         if (!res.ok) throw new Error(await res.text());
-        const vers = await res.json();
-
-        // Onbevestigde items (net lokaal toegevoegd) die de server nog niet
-        // meegeeft, blijven behouden i.p.v. te verdwijnen — pas zodra de
-        // server ze zelf teruggeeft, worden ze als "bevestigd" beschouwd.
-        onbevestigd = onbevestigd.filter((o) => {
-          const aanwezig = vers[o.lijstNaam].some((x) => x.id === o.item.id);
-          if (!aanwezig) {
-            vers[o.lijstNaam] = [...vers[o.lijstNaam], o.item]
-              .sort((a, b) => (a.datumAfhaling ?? "").localeCompare(b.datumAfhaling ?? ""));
-          }
-          return !aanwezig; // enkel nog-niet-bevestigde items bijhouden
-        });
-
-        huidigeData = vers;
+        huidigeData = await res.json();
         renderAlles();
         setStatus("Bijgewerkt om " + new Date().toLocaleTimeString());
       } catch (err) {
@@ -619,7 +588,6 @@
         const lijstNaam = type === "patient" ? "patientOpenstaand" : "voorraadOpenstaand";
         huidigeData[lijstNaam] = [...huidigeData[lijstNaam], nieuweBereiding]
           .sort((a, b) => (a.datumAfhaling ?? "").localeCompare(b.datumAfhaling ?? ""));
-        onbevestigd.push({ item: nieuweBereiding, lijstNaam });
         renderAlles();
         setStatus(type === "patient" ? "Bereiding toegevoegd." : "Voorraadbereiding toegevoegd.");
 
@@ -627,9 +595,9 @@
         document.getElementById(`${prefix}-notitie`).value = "";
         if (type === "patient") vulStandaardDatumTijdIn("patient");
 
-        // Herhaaldelijk stil controleren tot de server het item zelf ook
-        // teruggeeft — het item blijft intussen gewoon zichtbaar staan.
-        herbevestigOnbevestigd();
+        // Stille controle-herlaad na een paar seconden, zodat alles
+        // uiteindelijk toch weer 100% overeenkomt met de server.
+        setTimeout(() => loadBereidingen(true), 2500);
       } catch (err) {
         setStatus("Fout bij opslaan: " + err.message);
       }
