@@ -72,8 +72,8 @@ export default async (req) => {
     if (!body.productnaam) {
       return json({ error: "Productnaam is verplicht." }, 400);
     }
-    if (body.reden !== "ontbrekend" && body.reden !== "speciaal") {
-      return json({ error: "Reden moet 'ontbrekend' of 'speciaal' zijn." }, 400);
+    if (!["ontbrekend", "speciaal", "klacht", "administratie"].includes(body.reden)) {
+      return json({ error: "Reden moet 'ontbrekend', 'speciaal', 'klacht' of 'administratie' zijn." }, 400);
     }
     const now = new Date().toISOString();
     const bestelling = {
