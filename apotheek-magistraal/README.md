@@ -39,6 +39,57 @@ apotheek-magistraal/
   → knop wordt "Zeker? Klik opnieuw" → een tweede klik binnen 3 seconden
   verwijdert echt (geen browser-popup, dus werkt overal betrouwbaar).
 
+## Login instellen — meerdere apotheken mogelijk
+
+Deze module ondersteunt meerdere apotheken op dezelfde site, elk met hun
+eigen naam, eigen 4-cijferige code, en volledig **afgescheiden data** (elke
+apotheek ziet enkel haar eigen bereidingen). Nieuwe apotheken kunnen enkel
+een account aanmaken met een **uitnodigingscode** die jij zelf bepaalt en
+persoonlijk doorgeeft.
+
+**Hoe het werkt voor gebruikers:**
+- **Inloggen**: naam van de apotheek + code (4 cijfers via het toetsenbord
+  op het scherm).
+- **Nieuwe apotheek**: naam van de apotheek + code kiezen + de
+  uitnodigingscode die jij hebt doorgegeven. Na een geslaagde registratie
+  is de apotheek meteen aangemeld.
+- Eens aangemeld op een pc/browser, blijft die aangemeld (via
+  `localStorage`) tot er expliciet op "uitloggen" geklikt wordt (te vinden
+  onder de titel, naast "Aangemeld als: ...").
+
+**Instellen in Netlify (voor echt gebruik):**
+1. Ga naar je site in Netlify → **Site configuration → Environment variables**.
+2. Voeg twee variabelen toe:
+   - `MASTER_UITNODIGINGSCODE` — het geheim dat je persoonlijk doorgeeft aan
+     een nieuwe apotheek vóór ze een account aanmaken (bv. `WELKOM2026`).
+   - `TOKEN_SECRET` — een lang willekeurig geheim, gegenereerd via bv.
+     `openssl rand -hex 32` in een terminal. Dit wordt nooit door een mens
+     ingetikt — het beveiligt de sessies van alle apotheken samen.
+3. Deploy opnieuw (**Deploys → Trigger deploy**) zodat de nieuwe environment
+   variables actief worden.
+
+**Tijdens development:** zolang je `MASTER_UITNODIGINGSCODE` en
+`TOKEN_SECRET` niet instelt, werkt alles in een open dev-modus: registratie
+vraagt geen uitnodigingscode, en alle "apotheken" delen dezelfde
+ontwikkel-store — handig om te testen zonder telkens in te loggen als een
+andere apotheek. Zodra je beide variabelen instelt, wordt alles automatisch
+correct afgescheiden per apotheek, zonder verdere code-aanpassing.
+
+**Een 2e (of 3e, 4e, ...) apotheek toevoegen:** geef hen gewoon de site-URL
+en de `MASTER_UITNODIGINGSCODE`. Zij kiezen zelf hun apotheeknaam en code via
+"Nieuwe apotheek" — jij hoeft verder niets in te stellen, hun data wordt
+automatisch in een eigen, afgescheiden store bewaard.
+
+Zonder deze twee variabelen correct ingesteld, geeft de login een foutmelding
+("Server is niet correct geconfigureerd").
+
+**Lokaal testen (`netlify dev`)**: maak een bestand `.env` aan in deze map
+(niet mee committen naar Git!) met:
+```
+APOTHEEK_WACHTWOORD=jouwwachtwoord
+APOTHEEK_TOKEN=eenlangwilekeurigetekenreeks
+```
+
 ## Lokaal testen
 
 ```
@@ -57,11 +108,14 @@ of koppel deze map via Git aan een Netlify-site.
 
 ## Let op bij samenvoegen met andere modules
 
-- Deze module gebruikt de Netlify Blobs-store `"magistraal"` met keys
-  `bereiding-<uuid>`, elk met een `type`-veld (`"patient"` of `"voorraad"`).
-  Dat botst niet met andere modules zolang zij hun eigen store-naam
-  gebruiken (bv. `"temperatuurlog"`, `"todos"`).
-- De functie draait op `/api/magistraal` — houd deze padnaam ook zo aan in
-  de uiteindelijke samengevoegde app, of pas de `fetch`-aanroepen in
-  `public/index.html` aan als je het pad wijzigt.
+- Deze module gebruikt per apotheek een eigen Netlify Blobs-store
+  (`magistraal-<apotheekId>`), plus een gedeelde store `apotheek-accounts`
+  voor de apotheek-accounts zelf. Dat botst niet met andere modules zolang
+  zij hun eigen store-namen gebruiken (bv. `temperatuurlog-<apotheekId>`).
+- De functies draaien op `/api/magistraal`, `/api/login` en `/api/register`
+  — houd deze padnamen ook zo aan in de uiteindelijke samengevoegde app.
+- Als je dit login-systeem later ook voor andere modules wil hergebruiken,
+  kan je dezelfde `/api/login` en `/api/register` gebruiken — het token
+  bevat het `apotheekId`, dus elke module kan daarmee zijn eigen
+  `<modulenaam>-<apotheekId>` store aanmaken.
 

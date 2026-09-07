@@ -1,13 +1,44 @@
 import { getStore } from "@netlify/blobs";
 
-// Eén store voor deze module, met twee "types" bereidingen:
+// Eén store PER APOTHEEK (bepaald via het token, zie login.js/register.js),
+// met twee "types" bereidingen:
 // - "patient": magistrale bereiding voor een specifieke patiënt
 // - "voorraad": bereiding die terug aangemaakt moet worden voor de voorraad
-const STORE_NAME = "magistraal";
 const KEY_PREFIX = "bereiding-";
 
+async function hmacHex(bericht, geheim) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(geheim),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(bericht));
+  return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 export default async (req) => {
-  const store = getStore(STORE_NAME);
+  const tokenSecret = process.env.TOKEN_SECRET;
+  const meegestuurdToken = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+
+  let apotheekId;
+  if (!tokenSecret) {
+    // Dev-modus: geen TOKEN_SECRET ingesteld, iedereen deelt dezelfde
+    // ontwikkel-store zodat je makkelijker kan testen zonder eerst een
+    // apotheek-account aan te maken.
+    apotheekId = "dev";
+  } else {
+    const [id, signature] = meegestuurdToken.split(".");
+    if (!id || !signature) return json({ error: "Niet ingelogd of sessie verlopen." }, 401);
+    const verwachteSignature = await hmacHex(id, tokenSecret);
+    if (signature !== verwachteSignature) {
+      return json({ error: "Niet ingelogd of sessie verlopen." }, 401);
+    }
+    apotheekId = id;
+  }
+
+  const store = getStore(`magistraal-${apotheekId}`);
   const url = new URL(req.url);
   const id = url.searchParams.get("id");
 
@@ -18,9 +49,10 @@ export default async (req) => {
       return json(bereiding);
     }
     const { blobs } = await store.list({ prefix: KEY_PREFIX });
-    const alles = await Promise.all(
+    const opgehaald = await Promise.all(
       blobs.map((b) => store.get(b.key, { type: "json" }))
     );
+    const alles = opgehaald.filter(Boolean); // net verwijderde items kunnen hier nog even als null opduiken
     const sorteerOpenstaand = (a, b) => (a.datumAfhaling ?? "").localeCompare(b.datumAfhaling ?? "");
     const sorteerGeschiedenis = (a, b) => (b.klaarOp ?? "").localeCompare(a.klaarOp ?? "");
 
@@ -112,7 +144,10 @@ export default async (req) => {
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store, no-cache, must-revalidate",
+    },
   });
 }
 
