@@ -202,7 +202,9 @@
     <div class="row">
       <div>
         <label for="new-productnaam">Productnaam</label>
-        <input id="new-productnaam" type="text" placeholder="Naam van het product" />
+        <input id="new-productnaam" type="text" placeholder="Naam van het product" list="productnaam-suggesties" />
+        <datalist id="productnaam-suggesties"></datalist>
+        <div id="productnaam-hint" style="font-size:0.8rem; color:#2b6cb0; margin-top:2px; min-height:1.1em;"></div>
       </div>
       <div>
         <label for="new-cnk">CNK (optioneel)</label>
@@ -249,6 +251,31 @@
   </div>
   <div id="geschiedenis-list"></div>
   <p class="empty" id="geschiedenis-empty" style="display:none;">Nog geen bestellingen afgewerkt.</p>
+
+  <h2>Vaste leveranciers</h2>
+  <p class="uitleg" style="font-size:0.85rem; color:#777; margin-top:-6px;">Naslaglijst: welke leverancier voor welk product, zodat je dat niet elke keer moet opzoeken.</p>
+  <div class="formulier" style="margin-bottom:8px;">
+    <div class="row" style="grid-template-columns: 1.2fr 1.2fr 1.4fr auto;">
+      <div>
+        <label for="lev-productnaam">Productnaam</label>
+        <input id="lev-productnaam" type="text" placeholder="Naam van het product" />
+      </div>
+      <div>
+        <label for="lev-leverancier">Leverancier</label>
+        <input id="lev-leverancier" type="text" placeholder="Naam van de leverancier" />
+      </div>
+      <div>
+        <label for="lev-link">Link (optioneel)</label>
+        <input id="lev-link" type="url" placeholder="https://..." />
+      </div>
+      <div style="display:flex; align-items:flex-end;">
+        <button class="primary" id="lev-add-btn">Toevoegen</button>
+      </div>
+    </div>
+  </div>
+  <input id="lev-zoekveld" type="text" placeholder="Zoeken op productnaam of leverancier..." style="margin-bottom:8px;" />
+  <div id="leveranciers-list"></div>
+  <p class="empty" id="leveranciers-empty" style="display:none;">Nog geen leveranciers toegevoegd.</p>
 
   <script>
     const API = "/api/bestellingen";
@@ -370,6 +397,17 @@
         badge.classList.add(b.reden);
         el.querySelector(".hoeveelheid").textContent = "Aantal: " + b.hoeveelheid;
         el.querySelector(".notitie").textContent = b.notitie || "";
+
+        if (opties.toonActies) {
+          const match = vindLeverancierMatch(b.productnaam);
+          if (match && match.link) {
+            const bestelBtn = document.createElement("button");
+            bestelBtn.className = "primary klein";
+            bestelBtn.textContent = "🛒 Direct bestellen";
+            bestelBtn.addEventListener("click", () => window.open(match.link, "_blank", "noopener,noreferrer"));
+            el.querySelector(".bestelling-actions").prepend(bestelBtn);
+          }
+        }
 
         if (b.contacteren) {
           const contactPlek = el.querySelector(".contact-plek");
@@ -499,6 +537,23 @@
       }
     }
 
+    function vindLeverancierMatch(productnaam) {
+      const naam = (productnaam || "").trim().toLowerCase();
+      if (!naam) return null;
+      return (leveranciersLijst || []).find((l) => {
+        const lnaam = l.productnaam.toLowerCase();
+        return lnaam === naam || lnaam.includes(naam) || naam.includes(lnaam);
+      }) || null;
+    }
+
+    function toonLeverancierHint() {
+      const naam = document.getElementById("new-productnaam").value;
+      const hint = document.getElementById("productnaam-hint");
+      const match = vindLeverancierMatch(naam);
+      hint.textContent = match ? `📦 "${match.productnaam}" → leverancier: ${match.leverancier}` : "";
+    }
+    document.getElementById("new-productnaam").addEventListener("input", toonLeverancierHint);
+
     async function voegBestellingToe() {
       const productnaam = document.getElementById("new-productnaam").value.trim();
       const cnk = document.getElementById("new-cnk").value.trim();
@@ -529,6 +584,7 @@
         setStatus("Toegevoegd.");
 
         document.getElementById("new-productnaam").value = "";
+        document.getElementById("productnaam-hint").textContent = "";
         document.getElementById("new-cnk").value = "";
         document.getElementById("new-hoeveelheid").value = "1";
         document.getElementById("new-patient").value = "";
@@ -550,7 +606,11 @@
           body: JSON.stringify({ klaar: true }),
         });
         if (!res.ok) throw new Error(await res.text());
-        await loadBestellingen();
+        const bijgewerkt = await res.json();
+        huidigeData.openstaand = huidigeData.openstaand.filter((x) => x.id !== id);
+        huidigeData.geschiedenis = [bijgewerkt, ...huidigeData.geschiedenis];
+        renderAlles();
+        setStatus("Bijgewerkt.");
       } catch (err) {
         setStatus("Fout bij bijwerken: " + err.message);
       }
@@ -565,7 +625,12 @@
           body: JSON.stringify({ klaar: false }),
         });
         if (!res.ok) throw new Error(await res.text());
-        await loadBestellingen();
+        const bijgewerkt = await res.json();
+        huidigeData.geschiedenis = huidigeData.geschiedenis.filter((x) => x.id !== id);
+        huidigeData.openstaand = [...huidigeData.openstaand, bijgewerkt]
+          .sort((a, b) => (a.aangemaakt ?? "").localeCompare(b.aangemaakt ?? ""));
+        renderAlles();
+        setStatus("Bijgewerkt.");
       } catch (err) {
         setStatus("Fout bij bijwerken: " + err.message);
       }
@@ -576,7 +641,10 @@
       try {
         const res = await apiFetch(`${API}?id=${id}`, { method: "DELETE" });
         if (!res.ok) throw new Error(await res.text());
-        await loadBestellingen();
+        huidigeData.openstaand = huidigeData.openstaand.filter((x) => x.id !== id);
+        huidigeData.geschiedenis = huidigeData.geschiedenis.filter((x) => x.id !== id);
+        renderAlles();
+        setStatus("Verwijderd.");
       } catch (err) {
         setStatus("Fout bij verwijderen: " + err.message);
       }
@@ -631,6 +699,160 @@
     }
 
     document.getElementById("add-btn").addEventListener("click", voegBestellingToe);
+
+    // ---- Vaste leveranciers (naslaglijst) ----
+    const LEV_API = "/api/leveranciers";
+    let leveranciersLijst = [];
+    let bewerktLeverancierId = null;
+
+    async function laadLeveranciers() {
+      try {
+        const res = await apiFetch(`${LEV_API}?_=${Date.now()}`);
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        leveranciersLijst = data.lijst;
+        renderLeveranciers();
+        vulProductnaamSuggesties();
+      } catch (err) {
+        setStatus("Fout bij laden van leveranciers: " + err.message);
+      }
+    }
+
+    function vulProductnaamSuggesties() {
+      const datalist = document.getElementById("productnaam-suggesties");
+      datalist.innerHTML = "";
+      const uniekeNamen = [...new Set((leveranciersLijst || []).map((l) => l.productnaam))];
+      for (const naam of uniekeNamen) {
+        const opt = document.createElement("option");
+        opt.value = naam;
+        datalist.appendChild(opt);
+      }
+    }
+
+    function renderLeveranciers() {
+      const zoekterm = document.getElementById("lev-zoekveld").value.trim().toLowerCase();
+      const gesorteerd = [...leveranciersLijst].sort((a, b) =>
+        a.productnaam.localeCompare(b.productnaam, "nl", { sensitivity: "base" })
+      );
+      const gefilterd = gesorteerd.filter((l) =>
+        !zoekterm ||
+        l.productnaam.toLowerCase().includes(zoekterm) ||
+        l.leverancier.toLowerCase().includes(zoekterm)
+      );
+      const container = document.getElementById("leveranciers-list");
+      const empty = document.getElementById("leveranciers-empty");
+      container.innerHTML = "";
+      empty.style.display = gefilterd.length === 0 ? "block" : "none";
+      empty.textContent = leveranciersLijst.length === 0
+        ? "Nog geen leveranciers toegevoegd."
+        : "Geen resultaten voor deze zoekopdracht.";
+      for (const l of gefilterd) {
+        const el = document.createElement("div");
+        el.className = "bestelling";
+        el.innerHTML = `
+          <div class="bestelling-body">
+            <div class="bestelling-header">
+              <span class="item-naam"></span>
+              <span class="hoeveelheid"></span>
+            </div>
+            <div class="lev-link-plek"></div>
+            <div class="bestelling-actions">
+              <button class="klein gebruik-lev-btn">Gebruiken</button>
+              <button class="klein bewerk-lev-btn">Bewerken</button>
+              <button class="danger delete-lev-btn">Verwijderen</button>
+            </div>
+          </div>
+        `;
+        el.querySelector(".item-naam").textContent = l.productnaam;
+        el.querySelector(".hoeveelheid").textContent = "Leverancier: " + l.leverancier;
+        if (l.link) {
+          const linkEl = document.createElement("a");
+          linkEl.href = l.link;
+          linkEl.target = "_blank";
+          linkEl.rel = "noopener noreferrer";
+          linkEl.textContent = "🔗 " + l.link;
+          linkEl.style.fontSize = "0.85rem";
+          el.querySelector(".lev-link-plek").appendChild(linkEl);
+        }
+        el.querySelector(".gebruik-lev-btn").addEventListener("click", () => gebruikLeverancier(l));
+        el.querySelector(".bewerk-lev-btn").addEventListener("click", () => bewerkLeverancier(l));
+        koppelVerwijderLevKnop(el.querySelector(".delete-lev-btn"), l.id);
+        container.appendChild(el);
+      }
+    }
+
+    document.getElementById("lev-zoekveld").addEventListener("input", renderLeveranciers);
+
+    function gebruikLeverancier(l) {
+      document.getElementById("new-productnaam").value = l.productnaam;
+      toonLeverancierHint();
+      const veld = document.getElementById("new-productnaam");
+      veld.focus();
+      window.scrollTo({ top: veld.offsetTop - 100, behavior: "smooth" });
+    }
+
+    async function leverancierToevoegen() {
+      const productnaam = document.getElementById("lev-productnaam").value.trim();
+      const leverancier = document.getElementById("lev-leverancier").value.trim();
+      const link = document.getElementById("lev-link").value.trim();
+      if (!productnaam || !leverancier) {
+        setStatus("Productnaam en leverancier zijn verplicht.");
+        return;
+      }
+      try {
+        const url = bewerktLeverancierId ? `${LEV_API}?id=${bewerktLeverancierId}` : LEV_API;
+        const methode = bewerktLeverancierId ? "PUT" : "POST";
+        const res = await apiFetch(url, {
+          method: methode,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productnaam, leverancier, link }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        setStatus(bewerktLeverancierId ? "Leverancier bijgewerkt." : "Leverancier toegevoegd.");
+        document.getElementById("lev-productnaam").value = "";
+        document.getElementById("lev-leverancier").value = "";
+        document.getElementById("lev-link").value = "";
+        bewerktLeverancierId = null;
+        document.getElementById("lev-add-btn").textContent = "Toevoegen";
+        await laadLeveranciers();
+      } catch (err) {
+        setStatus("Fout bij opslaan: " + err.message);
+      }
+    }
+    document.getElementById("lev-add-btn").addEventListener("click", leverancierToevoegen);
+
+    function bewerkLeverancier(l) {
+      document.getElementById("lev-productnaam").value = l.productnaam;
+      document.getElementById("lev-leverancier").value = l.leverancier;
+      document.getElementById("lev-link").value = l.link || "";
+      bewerktLeverancierId = l.id;
+      document.getElementById("lev-add-btn").textContent = "Wijzigingen opslaan";
+      window.scrollTo({ top: document.getElementById("lev-productnaam").offsetTop - 100, behavior: "smooth" });
+    }
+
+    async function verwijderLeverancier(id) {
+      try {
+        const res = await apiFetch(`${LEV_API}?id=${id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error(await res.text());
+        await laadLeveranciers();
+      } catch (err) {
+        setStatus("Fout bij verwijderen: " + err.message);
+      }
+    }
+    function koppelVerwijderLevKnop(button, id) {
+      let bevestigen = false;
+      let timeoutId;
+      button.addEventListener("click", () => {
+        if (!bevestigen) {
+          bevestigen = true;
+          button.textContent = "Zeker? Klik opnieuw";
+          timeoutId = setTimeout(() => { bevestigen = false; button.textContent = "Verwijderen"; }, 3000);
+        } else {
+          clearTimeout(timeoutId);
+          verwijderLeverancier(id);
+        }
+      });
+    }
 
     // ---- Login (identiek aan Magistraal, zelfde accounts) ----
     const PIN_LENGTE = 4;
@@ -757,6 +979,7 @@
         toonAangemeldAls(data.apotheeknaam || apotheeknaam);
         toonLoginOverlay(false);
         loadBestellingen();
+        laadLeveranciers();
       } catch (err) {
         foutVeld.textContent = "Fout bij aanmelden: " + err.message;
         ingevoerdeCode = "";
@@ -770,6 +993,7 @@
       toonAangemeldAls(localStorage.getItem("magistraal-apotheeknaam"));
       toonLoginOverlay(false);
       loadBestellingen();
+      laadLeveranciers();
     } else {
       toonLoginOverlay(true);
     }

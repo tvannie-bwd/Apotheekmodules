@@ -4,8 +4,12 @@ Dit project bevat vijf modules die dezelfde login/apotheek-accounts delen:
 
 - **Magistraal** (`public/index.html`, `netlify/functions/magistraal.js`):
   patiëntgebonden en voorraad-bereidingen, zie verder in dit document.
-- **Speciale bestellingen** (`public/bestellingen.html`, `netlify/functions/bestellingen.js`):
-  ontbrekende en/of speciaal te bestellen producten.
+- **Speciale bestellingen** (`public/bestellingen.html`, `netlify/functions/bestellingen.js`,
+  `netlify/functions/leveranciers.js`):
+  ontbrekende en/of speciaal te bestellen producten. Bevat ook een aparte
+  naslaglijst **"Vaste leveranciers"**: productnaam + bijhorende leverancier,
+  doorzoekbaar, om snel op te zoeken welk product altijd via welke
+  leverancier besteld wordt.
 - **Contact arts** (`public/contact-arts.html`, `netlify/functions/contact-arts.js`):
   kort vervolgverslag na telefonisch contact met een arts, zodat collega's
   kunnen opvolgen.
