@@ -1,3 +1,41 @@
+# Apotheek — Magistraal, Speciale bestellingen, Contact arts, Mutualiteiten & Huisbereidingen
+
+Dit project bevat vijf modules die dezelfde login/apotheek-accounts delen:
+
+- **Magistraal** (`public/index.html`, `netlify/functions/magistraal.js`):
+  patiëntgebonden en voorraad-bereidingen, zie verder in dit document.
+- **Speciale bestellingen** (`public/bestellingen.html`, `netlify/functions/bestellingen.js`):
+  ontbrekende en/of speciaal te bestellen producten.
+- **Contact arts** (`public/contact-arts.html`, `netlify/functions/contact-arts.js`):
+  kort vervolgverslag na telefonisch contact met een arts, zodat collega's
+  kunnen opvolgen.
+- **Mutualiteiten** (`public/mutualiteiten.html`): statische naslagpagina met
+  vergelijkingstabellen van extra terugbetalingen per Vlaamse mutualiteit.
+- **Huisbereidingen** (`public/huisbereidingen.html`, `netlify/functions/huisbereidingen.js`):
+  prijsberekening voor vaste huisbereidingen (recepten), gebaseerd op de
+  echte rekenwijze uit de bestaande Excel-bestanden. Per ingrediënt geef je
+  in: aankoopprijs van de verpakking, inhoud van die verpakking, eenheid,
+  BTW% en korting% (beide individueel instelbaar per ingrediënt, want dit
+  verschilt per product/leverancier), en de gebruikte hoeveelheid in de
+  volledige bereiding (in dezelfde eenheid als de verpakking). Daarnaast
+  geef je het aantal verkoopeenheden op dat de bereiding oplevert (bv. 50
+  flessen), en eventuele extra kosten per eenheid (bv. flesje + doosje).
+  De aankoopprijs (AP) per verkoopeenheid wordt automatisch berekend:
+  `prijs per aankoopeenheid = aankoopprijs × (1 + btw/100) × (1 − korting/100) / verpakkingsinhoud`,
+  `kost per verkoopeenheid = prijs per aankoopeenheid × hoeveelheid / aantal verkoopeenheden`,
+  `AP = Σ (kost per verkoopeenheid over alle ingrediënten) + extra kosten`.
+  De verkoopprijs (PP) geef je zelf in (dit wordt niet automatisch berekend
+  met een marge%, exact zoals in de Excel-bestanden) — de winst per eenheid
+  (`PP − AP`) en desgewenst de totale winst (bij een ingegeven aantal
+  verkocht) worden automatisch getoond. Recepten blijven bewaard,
+  herbruikbaar en aanpasbaar; de prijs wordt altijd live herberekend.
+
+Alle vijf modules gebruiken **dezelfde login** (`/api/login`, `/api/register`,
+dezelfde `apotheek-accounts`-store) — eenmaal aanmelden op één pagina, en de
+andere vier herkennen je automatisch (want alle vijf bewaren het token onder
+dezelfde sleutel in `localStorage`). Bovenaan elke pagina staan links naar de
+andere modules.
+
 # Module 1 — Magistraal
 
 Registratie en opvolging van magistrale bereidingen, in twee tabbladen:

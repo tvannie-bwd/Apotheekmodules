@@ -1,9 +1,8 @@
 import { getStore } from "@netlify/blobs";
 
-// Hergebruikt exact hetzelfde login-systeem als magistraal.js (zelfde
-// apotheek-accounts, zelfde TOKEN_SECRET). Enkel de datastore is anders:
-// per apotheek een eigen store "bestellingen-<apotheekId>".
-const KEY_PREFIX = "bestelling-";
+// Hergebruikt hetzelfde login-systeem als de andere modules. Eigen store
+// per apotheek voor de vaste recepten (huisbereidingen).
+const KEY_PREFIX = "recept-";
 
 async function hmacHex(bericht, geheim) {
   const key = await crypto.subtle.importKey(
@@ -15,6 +14,27 @@ async function hmacHex(bericht, geheim) {
   );
   const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(bericht));
   return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function getalOf(v, standaard = 0) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : standaard;
+}
+
+function normaliseerIngredient(i) {
+  return {
+    naam: i.naam ?? "",
+    aankoopprijs: getalOf(i.aankoopprijs),
+    verpakkingsinhoud: getalOf(i.verpakkingsinhoud, 1),
+    eenheid: i.eenheid ?? "",
+    btw: getalOf(i.btw),
+    korting: getalOf(i.korting),
+    hoeveelheid: getalOf(i.hoeveelheid),
+  };
+}
+
+function normaliseerExtraKost(k) {
+  return { naam: k.naam ?? "", bedrag: getalOf(k.bedrag) };
 }
 
 export default async (req) => {
@@ -34,32 +54,24 @@ export default async (req) => {
     apotheekId = id;
   }
 
-  const store = getStore(`bestellingen-${apotheekId}`);
+  const store = getStore(`huisbereidingen-${apotheekId}`);
   const url = new URL(req.url);
   const id = url.searchParams.get("id");
 
   if (req.method === "GET") {
     if (id) {
-      const bestelling = await store.get(KEY_PREFIX + id, { type: "json" });
-      if (!bestelling) return json({ error: "Niet gevonden." }, 404);
-      return json(bestelling);
+      const recept = await store.get(KEY_PREFIX + id, { type: "json" });
+      if (!recept) return json({ error: "Niet gevonden." }, 404);
+      return json(recept);
     }
     const { blobs } = await store.list({ prefix: KEY_PREFIX });
     const opgehaald = await Promise.all(
       blobs.map((b) => store.get(b.key, { type: "json" }))
     );
-    const alles = opgehaald.filter(Boolean);
+    const lijst = opgehaald.filter(Boolean)
+      .sort((a, b) => (a.naam ?? "").localeCompare(b.naam ?? ""));
 
-    // Openstaand: oudste registratie eerst (FIFO). Boek: meest recent
-    // afgevinkt eerst.
-    const openstaand = alles
-      .filter((b) => !b.klaar)
-      .sort((a, b) => (a.aangemaakt ?? "").localeCompare(b.aangemaakt ?? ""));
-    const geschiedenis = alles
-      .filter((b) => b.klaar)
-      .sort((a, b) => (b.klaarOp ?? "").localeCompare(a.klaarOp ?? ""));
-
-    return json({ openstaand, geschiedenis });
+    return json({ lijst });
   }
 
   if (req.method === "POST") {
@@ -69,33 +81,24 @@ export default async (req) => {
     } catch {
       return json({ error: "Ongeldige JSON in request body." }, 400);
     }
-    if (!body.productnaam) {
-      return json({ error: "Productnaam is verplicht." }, 400);
-    }
-    if (body.reden !== "ontbrekend" && body.reden !== "speciaal") {
-      return json({ error: "Reden moet 'ontbrekend' of 'speciaal' zijn." }, 400);
+    if (!body.naam || !Array.isArray(body.ingredienten) || body.ingredienten.length === 0) {
+      return json({ error: "Naam en minstens één ingrediënt zijn verplicht." }, 400);
     }
     const now = new Date().toISOString();
-    const bestelling = {
+    const recept = {
       id: crypto.randomUUID(),
-      productnaam: body.productnaam,
-      cnk: body.cnk ?? "",
-      hoeveelheid: body.hoeveelheid ?? 1,
-      reden: body.reden, // "ontbrekend" of "speciaal"
-      patient: body.patient ?? "",
-      notitie: body.notitie ?? "",
-      actie: "",
-      contacteren: body.contacteren ?? false,
-      telefoon: body.telefoon ?? "",
-      email: body.email ?? "",
-      gecontacteerd: false,
-      klaar: false,
-      klaarOp: null,
+      naam: body.naam,
+      eenheidLabel: body.eenheidLabel ?? "",
+      aantalVerkoopeenheden: getalOf(body.aantalVerkoopeenheden, 1),
+      verkoopprijs: getalOf(body.verkoopprijs),
+      aantalVerkocht: getalOf(body.aantalVerkocht),
+      ingredienten: body.ingredienten.map(normaliseerIngredient),
+      extraKosten: Array.isArray(body.extraKosten) ? body.extraKosten.map(normaliseerExtraKost) : [],
       aangemaakt: now,
       bijgewerkt: now,
     };
-    await store.setJSON(KEY_PREFIX + bestelling.id, bestelling);
-    return json(bestelling, 201);
+    await store.setJSON(KEY_PREFIX + recept.id, recept);
+    return json(recept, 201);
   }
 
   if (req.method === "PUT") {
@@ -108,29 +111,19 @@ export default async (req) => {
     } catch {
       return json({ error: "Ongeldige JSON in request body." }, 400);
     }
-
-    const wordtNuKlaarGemeld = body.klaar === true && !existing.klaar;
-    const wordtHeropend = body.klaar === false && existing.klaar;
-
     const updated = {
       ...existing,
-      productnaam: body.productnaam ?? existing.productnaam,
-      cnk: body.cnk ?? existing.cnk,
-      hoeveelheid: body.hoeveelheid ?? existing.hoeveelheid,
-      reden: body.reden ?? existing.reden,
-      patient: body.patient ?? existing.patient,
-      notitie: body.notitie ?? existing.notitie,
-      actie: body.actie ?? existing.actie,
-      contacteren: body.contacteren ?? existing.contacteren,
-      telefoon: body.telefoon ?? existing.telefoon,
-      email: body.email ?? existing.email,
-      gecontacteerd: body.gecontacteerd ?? existing.gecontacteerd,
-      klaar: body.klaar ?? existing.klaar,
-      klaarOp: wordtNuKlaarGemeld
-        ? new Date().toISOString()
-        : wordtHeropend
-        ? null
-        : existing.klaarOp,
+      naam: body.naam ?? existing.naam,
+      eenheidLabel: body.eenheidLabel ?? existing.eenheidLabel,
+      aantalVerkoopeenheden: body.aantalVerkoopeenheden !== undefined ? getalOf(body.aantalVerkoopeenheden, 1) : existing.aantalVerkoopeenheden,
+      verkoopprijs: body.verkoopprijs !== undefined ? getalOf(body.verkoopprijs) : existing.verkoopprijs,
+      aantalVerkocht: body.aantalVerkocht !== undefined ? getalOf(body.aantalVerkocht) : existing.aantalVerkocht,
+      ingredienten: Array.isArray(body.ingredienten)
+        ? body.ingredienten.map(normaliseerIngredient)
+        : existing.ingredienten,
+      extraKosten: Array.isArray(body.extraKosten)
+        ? body.extraKosten.map(normaliseerExtraKost)
+        : existing.extraKosten,
       bijgewerkt: new Date().toISOString(),
     };
     await store.setJSON(KEY_PREFIX + id, updated);
@@ -157,5 +150,5 @@ function json(data, status = 200) {
 }
 
 export const config = {
-  path: "/api/bestellingen",
+  path: "/api/huisbereidingen",
 };

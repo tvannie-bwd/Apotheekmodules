@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Speciale bestellingen</title>
+  <title>Contact arts</title>
   <style>
     body {
       font-family: system-ui, sans-serif;
@@ -27,7 +27,7 @@
     }
     .formulier .row {
       display: grid;
-      grid-template-columns: 1.3fr 0.9fr 0.6fr 1.1fr;
+      grid-template-columns: 1.1fr 1.1fr 1fr 0.9fr;
       gap: 8px;
     }
     label { font-size: 0.85rem; color: #555; margin-bottom: 2px; display: block; }
@@ -41,7 +41,7 @@
       border-radius: 4px;
       background: white;
     }
-    textarea { min-height: 60px; resize: vertical; }
+    textarea { min-height: 70px; resize: vertical; }
 
     button {
       padding: 8px 16px;
@@ -69,7 +69,7 @@
     }
     .clear-banner button { font-size: 0.85rem; padding: 4px 10px; }
 
-    .bestelling {
+    .contact {
       border: 1px solid #e2e2e2;
       border-radius: 8px;
       padding: 8px 12px;
@@ -78,48 +78,40 @@
       align-items: flex-start;
       gap: 10px;
     }
-    .bestelling input[type="checkbox"] {
+    .contact input[type="checkbox"] {
       width: auto;
       margin-top: 3px;
       transform: scale(1.15);
       cursor: pointer;
     }
-    .bestelling-body { flex: 1; }
-    .bestelling-header {
+    .contact-body { flex: 1; }
+    .contact-header {
       display: flex;
       justify-content: space-between;
       gap: 8px;
       flex-wrap: wrap;
     }
     .item-naam { font-weight: 600; font-size: 0.95rem; }
-    .reden-badge {
-      font-size: 0.75rem;
-      font-weight: 600;
-      padding: 2px 8px;
-      border-radius: 12px;
-      text-transform: uppercase;
+    .contact-datum { font-size: 0.82rem; color: #2b6cb0; font-weight: 600; }
+    .onderwerp { color: #444; font-size: 0.88rem; font-style: italic; margin-top: 2px; }
+    .verslag { color: #333; margin: 6px 0 0; white-space: pre-wrap; font-size: 0.9rem; }
+    .meta { font-size: 0.74rem; color: #999; margin-top: 6px; }
+    .contact-actions { margin-top: 6px; }
+    .notities-lijst { margin-top: 8px; }
+    .notitie-item {
+      background: #f7fafd; border: 1px solid #dce8f5; border-radius: 4px;
+      padding: 6px 8px; margin-bottom: 4px; font-size: 0.85rem;
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;
     }
-    .reden-badge.ontbrekend { background: #fde2e2; color: #c53030; }
-    .reden-badge.speciaal { background: #e0ecfb; color: #2b6cb0; }
-    .hoeveelheid { font-size: 0.82rem; color: #555; font-weight: 600; }
-    .notitie { color: #444; margin: 4px 0 0; white-space: pre-wrap; font-size: 0.9rem; }
-    .actie-veld { margin-top: 6px; }
-    .actie-veld label { font-size: 0.78rem; color: #2b6cb0; font-weight: 600; margin-bottom: 2px; }
-    .actie-veld textarea {
-      min-height: 40px; font-size: 0.88rem; padding: 6px;
-      border: 1px solid #cfe0f5; border-radius: 4px; background: #f7fafd;
+    .notitie-item .notitie-datum { color: #2b6cb0; font-size: 0.72rem; font-weight: 600; display: block; margin-bottom: 2px; }
+    .notitie-item .notitie-inhoud { flex: 1; }
+    .notitie-verwijder-btn {
+      font-size: 0.72rem; padding: 2px 6px; border: 1px solid #e0b0b0; color: #c53030;
+      background: white; border-radius: 3px; cursor: pointer; white-space: nowrap;
     }
-    .actie-tekst { color: #2b6cb0; font-size: 0.88rem; margin-top: 4px; white-space: pre-wrap; }
-    .actie-tekst strong { font-weight: 600; }
-    .contact-blok {
-      margin-top: 6px; padding: 6px 8px; background: #fff8e1; border: 1px solid #f0d78c;
-      border-radius: 4px; font-size: 0.85rem; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-    }
-    .contact-blok a { color: #7a5c00; font-weight: 600; }
-    .contact-blok label { display: flex; align-items: center; gap: 4px; margin: 0; color: #7a5c00; }
-    .contact-blok input[type="checkbox"] { width: auto; }
-    .meta { font-size: 0.74rem; color: #999; margin-top: 4px; }
-    .bestelling-actions { margin-top: 6px; }
+    .notitie-toevoegen { display: flex; gap: 6px; margin-top: 6px; }
+    .notitie-toevoegen input { flex: 1; font-size: 0.88rem; padding: 6px; }
+    .notitie-toevoegen button { font-size: 0.85rem; padding: 6px 10px; white-space: nowrap; }
 
     #status { font-size: 0.9rem; color: #555; margin-bottom: 16px; min-height: 1.2em; }
     .empty { color: #888; font-style: italic; }
@@ -135,11 +127,19 @@
     }
     .pin-toets:active { background: #e2e2e2; }
 
+    footer.maker-balk {
+      margin-top: 32px;
+      padding: 10px 0;
+      border-top: 1px solid #e2e2e2;
+      text-align: center;
+      font-size: 0.78rem;
+      color: #999;
+    }
+
     @media print {
-      .tabs, .formulier, #status, .print-btn, .clear-banner, a.module-link { display: none !important; }
-      .heading-openstaand, #openstaand-list, #openstaand-empty { display: none !important; }
-      input[type="checkbox"], .bestelling-actions { display: none !important; }
-      .bestelling { break-inside: avoid; border-color: #999; }
+      .tabs, .formulier, #status, .print-btn, .clear-banner, a.module-link, footer.maker-balk { display: none !important; }
+      .contact-actions { display: none !important; }
+      .contact { break-inside: avoid; border-color: #999; }
       p.subtitle { display: none !important; }
     }
   </style>
@@ -171,78 +171,66 @@
     </div>
   </div>
 
-  <h1>Speciale bestellingen</h1>
+  <h1>Contact arts</h1>
   <p class="subtitle" id="aangemeld-als" style="display:none;"></p>
-  <p class="subtitle"><a class="module-link" href="/">← Naar Magistraal</a></p>
+  <p class="subtitle">
+    <a class="module-link" href="/">← Naar Magistraal</a> ·
+    <a class="module-link" href="/bestellingen.html">Speciale bestellingen</a> ·
+    <a class="module-link" href="/mutualiteiten.html">Mutualiteiten</a> ·
+    <a class="module-link" href="/huisbereidingen.html">Huisbereidingen →</a>
+  </p>
 
   <div id="status"></div>
 
   <div class="formulier">
     <div class="row">
       <div>
-        <label for="new-productnaam">Productnaam</label>
-        <input id="new-productnaam" type="text" placeholder="Naam van het product" />
+        <label for="new-arts">Naam arts</label>
+        <input id="new-arts" type="text" placeholder="Naam van de arts" />
       </div>
       <div>
-        <label for="new-cnk">CNK (optioneel)</label>
-        <input id="new-cnk" type="text" placeholder="bv. 1234567" inputmode="numeric" />
+        <label for="new-patient">Naam patiënt</label>
+        <input id="new-patient" type="text" placeholder="Naam van de patiënt" />
       </div>
       <div>
-        <label for="new-hoeveelheid">Aantal</label>
-        <input id="new-hoeveelheid" type="number" min="1" value="1" />
+        <label for="new-datum">Datum contact</label>
+        <input id="new-datum" type="date" />
       </div>
       <div>
-        <label for="new-reden">Reden</label>
-        <select id="new-reden">
-          <option value="ontbrekend">Ontbrekend</option>
-          <option value="speciaal">Speciaal te bestellen</option>
-        </select>
-      </div>
-    </div>
-    <div>
-      <label for="new-patient">Naam patiënt (optioneel)</label>
-      <input id="new-patient" type="text" placeholder="Enkel invullen indien voor een specifieke patiënt" />
-    </div>
-    <div style="display:flex; align-items:center; gap:6px;">
-      <input id="new-contacteren" type="checkbox" style="width:auto;" />
-      <label for="new-contacteren" style="margin:0;">Patiënt moet gecontacteerd worden</label>
-    </div>
-    <div id="contact-velden" style="display:none;">
-      <div class="row" style="grid-template-columns: 1fr 1fr;">
-        <div>
-          <label for="new-telefoon">Telefoon</label>
-          <input id="new-telefoon" type="tel" placeholder="bv. 0470 12 34 56" />
-        </div>
-        <div>
-          <label for="new-email">E-mail</label>
-          <input id="new-email" type="email" placeholder="bv. naam@voorbeeld.be" />
+        <label for="new-uur">Uur contact</label>
+        <div style="display:flex; gap:4px;">
+          <select id="new-uur" style="flex:1;"></select>
+          <select id="new-minuut" style="flex:1;">
+            <option value="00">00</option>
+            <option value="30">30</option>
+          </select>
         </div>
       </div>
     </div>
     <div>
-      <label for="new-notitie">Notitie (optioneel)</label>
-      <textarea id="new-notitie" placeholder="Bijkomende info..."></textarea>
+      <label for="new-onderwerp">Onderwerp (optioneel)</label>
+      <input id="new-onderwerp" type="text" placeholder="bv. dosisaanpassing, vraag over interactie..." />
+    </div>
+    <div>
+      <label for="new-verslag">Vervolgverslag</label>
+      <textarea id="new-verslag" placeholder="Wat werd besproken/afgesproken tijdens het telefonisch contact..."></textarea>
     </div>
     <button class="primary" id="add-btn">Toevoegen</button>
   </div>
 
-  <h2 class="heading-openstaand">Openstaand</h2>
-  <div id="openstaand-list"></div>
-  <p class="empty" id="openstaand-empty" style="display:none;">Geen openstaande bestellingen.</p>
-
-  <h2>Bestellingenboek <button class="print-btn" onclick="afdrukken()">Afdrukken</button></h2>
+  <h2>Contactenboek <button class="print-btn" onclick="afdrukken()">Afdrukken</button></h2>
   <div id="clear-banner" class="clear-banner" style="display:none;">
-    Bestellingenboek afgedrukt. Nu leegmaken?
-    <button class="primary" onclick="leegBestellingenboek()">Ja, leegmaken</button>
+    Contactenboek afgedrukt. Nu leegmaken?
+    <button class="primary" onclick="leegContactenboek()">Ja, leegmaken</button>
     <button onclick="verbergLeegBanner()">Nee, laten staan</button>
   </div>
   <div id="geschiedenis-list"></div>
-  <p class="empty" id="geschiedenis-empty" style="display:none;">Nog geen bestellingen afgewerkt.</p>
+  <p class="empty" id="geschiedenis-empty" style="display:none;">Nog geen contacten geregistreerd.</p>
 
   <script>
-    const API = "/api/bestellingen";
+    const API = "/api/contact-arts";
     const status = document.getElementById("status");
-    let sessieToken = localStorage.getItem("magistraal-token"); // gedeeld met Magistraal
+    let sessieToken = localStorage.getItem("magistraal-token"); // gedeeld met de andere modules
 
     function setStatus(msg) { status.textContent = msg; }
 
@@ -260,6 +248,13 @@
       return res;
     }
 
+    function formatDatum(isoDateTime) {
+      if (!isoDateTime) return "";
+      const [datumDeel, uurDeel] = isoDateTime.split("T");
+      const [y, m, d] = datumDeel.split("-");
+      const uur = uurDeel ? uurDeel.slice(0, 5) : "";
+      return `${d}/${m}/${y}` + (uur ? ` om ${uur}` : "");
+    }
     function formatDatumTijd(iso) {
       if (!iso) return "";
       return new Date(iso).toLocaleString("nl-BE", {
@@ -269,7 +264,6 @@
     }
 
     let herbevestigBezig = false;
-
     async function herbevestigOnbevestigd() {
       if (herbevestigBezig) return;
       herbevestigBezig = true;
@@ -278,20 +272,19 @@
         if (onbevestigd.length === 0) break;
         await new Promise((r) => setTimeout(r, wachttijd));
         if (onbevestigd.length === 0) break;
-        await loadBestellingen(true);
+        await loadContacten(true);
       }
       herbevestigBezig = false;
     }
 
-    let huidigeData = { openstaand: [], geschiedenis: [] };
+    let huidigeLijst = [];
     let onbevestigd = [];
 
     function renderAlles() {
-      renderLijst("openstaand-list", "openstaand-empty", huidigeData.openstaand, { toonActies: true });
-      renderLijst("geschiedenis-list", "geschiedenis-empty", huidigeData.geschiedenis, { toonActies: false });
+      renderLijst("geschiedenis-list", "geschiedenis-empty", huidigeLijst);
     }
 
-    async function loadBestellingen(stil = false) {
+    async function loadContacten(stil = false) {
       if (!stil) setStatus("Bezig met laden...");
       try {
         const res = await apiFetch(`${API}?_=${Date.now()}`);
@@ -299,15 +292,14 @@
         const vers = await res.json();
 
         onbevestigd = onbevestigd.filter((o) => {
-          const aanwezig = vers[o.lijstNaam].some((x) => x.id === o.item.id);
+          const aanwezig = vers.lijst.some((x) => x.id === o.id);
           if (!aanwezig) {
-            vers[o.lijstNaam] = [...vers[o.lijstNaam], o.item]
-              .sort((a, b) => (a.aangemaakt ?? "").localeCompare(b.aangemaakt ?? ""));
+            vers.lijst = [o, ...vers.lijst];
           }
           return !aanwezig;
         });
 
-        huidigeData = vers;
+        huidigeLijst = vers.lijst;
         renderAlles();
         setStatus("Bijgewerkt om " + new Date().toLocaleTimeString());
       } catch (err) {
@@ -315,154 +307,161 @@
       }
     }
 
-    function renderLijst(containerId, emptyId, lijst, opties) {
+    function renderLijst(containerId, emptyId, lijst) {
       const container = document.getElementById(containerId);
       const empty = document.getElementById(emptyId);
       container.innerHTML = "";
       empty.style.display = lijst.length === 0 ? "block" : "none";
       for (const b of lijst) {
         const el = document.createElement("div");
-        el.className = "bestelling";
+        el.className = "contact";
         el.dataset.id = b.id;
-        const checkboxAttrs = opties.toonActies ? "" : "checked";
         el.innerHTML = `
-          <input type="checkbox" ${checkboxAttrs} title="${opties.toonActies ? "Markeer als besteld/ontvangen" : "Terugzetten naar openstaand"}" />
-          <div class="bestelling-body">
-            <div class="bestelling-header">
+          <div class="contact-body">
+            <div class="contact-header">
               <span class="item-naam"></span>
-              <span class="reden-badge"></span>
-              <span class="hoeveelheid"></span>
+              <span class="contact-datum"></span>
             </div>
-            <div class="notitie"></div>
-            <div class="contact-plek"></div>
-            ${opties.toonActies
-              ? `<div class="actie-veld">
-                   <label>Actie ondernomen</label>
-                   <textarea placeholder="bv. nabesteld bij groothandel X, telefonisch gecontacteerd..."></textarea>
-                 </div>`
-              : `<div class="actie-tekst"></div>`
-            }
+            <div class="onderwerp"></div>
+            <div class="verslag"></div>
+            <div class="notities-lijst"></div>
+            <div class="notitie-toevoegen">
+              <input type="text" class="nieuwe-notitie-veld" placeholder="Extra notitie toevoegen..." />
+              <button class="notitie-btn">Toevoegen</button>
+            </div>
             <div class="meta"></div>
-            ${opties.toonActies ? '<div class="bestelling-actions"><button class="danger delete-btn">Verwijderen</button></div>' : ""}
+            <div class="contact-actions"><button class="danger delete-btn">Verwijderen</button></div>
           </div>
         `;
-        el.querySelector(".item-naam").textContent = b.productnaam
-          + (b.cnk ? ` (CNK ${b.cnk})` : "")
-          + (b.patient ? ` — ${b.patient}` : "");
-        const badge = el.querySelector(".reden-badge");
-        badge.textContent = b.reden === "ontbrekend" ? "Ontbrekend" : "Speciaal";
-        badge.classList.add(b.reden);
-        el.querySelector(".hoeveelheid").textContent = "Aantal: " + b.hoeveelheid;
-        el.querySelector(".notitie").textContent = b.notitie || "";
+        el.querySelector(".item-naam").textContent = `Dr. ${b.arts} — ${b.patient}`;
+        el.querySelector(".contact-datum").textContent = formatDatum(b.contactDatum);
+        el.querySelector(".onderwerp").textContent = b.onderwerp || "";
+        el.querySelector(".verslag").textContent = b.verslag || "";
+        el.querySelector(".meta").textContent = "Geregistreerd: " + formatDatumTijd(b.aangemaakt);
 
-        if (b.contacteren) {
-          const contactPlek = el.querySelector(".contact-plek");
-          const linkjes = [];
-          if (b.telefoon) linkjes.push(`<a href="tel:${b.telefoon.replace(/\s+/g, "")}">📞 ${b.telefoon}</a>`);
-          if (b.email) linkjes.push(`<a href="mailto:${b.email}">✉️ ${b.email}</a>`);
-          const checkboxId = `gecontacteerd-${b.id}`;
-          contactPlek.innerHTML = `
-            <div class="contact-blok">
-              <span>Patiënt contacteren${linkjes.length ? ":" : ""}</span>
-              ${linkjes.join(" ")}
-              ${opties.toonActies ? `<label><input type="checkbox" id="${checkboxId}" ${b.gecontacteerd ? "checked" : ""}/> Gecontacteerd</label>` : (b.gecontacteerd ? "<strong>✓ Gecontacteerd</strong>" : "")}
-            </div>
-          `;
-          if (opties.toonActies) {
-            document.getElementById(checkboxId).addEventListener("change", (e) => bewaarGecontacteerd(b.id, e.target.checked));
-          }
+        const notitiesLijst = el.querySelector(".notities-lijst");
+        for (const n of b.notities || []) {
+          notitiesLijst.appendChild(maakNotitieElement(b.id, n, notitiesLijst));
         }
-        el.querySelector(".meta").textContent = opties.toonActies
-          ? "Geregistreerd: " + formatDatumTijd(b.aangemaakt)
-          : "Afgewerkt: " + formatDatumTijd(b.klaarOp);
 
-        if (opties.toonActies) {
-          const actieVeld = el.querySelector(".actie-veld textarea");
-          actieVeld.value = b.actie || "";
-          actieVeld.addEventListener("blur", () => bewaarActie(b.id, actieVeld.value));
-          el.querySelector('input[type="checkbox"]').addEventListener("change", () => markeerKlaar(b.id));
-          koppelVerwijderKnop(el.querySelector(".delete-btn"), b.id);
-        } else {
-          const actieTekst = el.querySelector(".actie-tekst");
-          actieTekst.innerHTML = b.actie ? `<strong>Actie:</strong> ${b.actie.replace(/</g, "&lt;")}` : "";
-          el.querySelector('input[type="checkbox"]').addEventListener("change", () => heropenBestelling(b.id));
-        }
+        const notitieVeld = el.querySelector(".nieuwe-notitie-veld");
+        const notitieToevoegen = () => voegNotitieToe(b.id, notitieVeld, notitiesLijst);
+        el.querySelector(".notitie-btn").addEventListener("click", notitieToevoegen);
+        notitieVeld.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") notitieToevoegen();
+        });
+
+        koppelVerwijderKnop(el.querySelector(".delete-btn"), b.id);
         container.appendChild(el);
       }
     }
 
-    async function bewaarActie(id, actie) {
+    function maakNotitieElement(contactId, notitie, notitiesLijst) {
+      const item = document.createElement("div");
+      item.className = "notitie-item";
+      item.innerHTML = `
+        <div class="notitie-inhoud">
+          <span class="notitie-datum"></span>
+          <span class="notitie-tekst"></span>
+        </div>
+        <button class="notitie-verwijder-btn">×</button>
+      `;
+      item.querySelector(".notitie-datum").textContent = formatDatumTijd(notitie.datum);
+      item.querySelector(".notitie-tekst").textContent = notitie.tekst;
+
+      const verwijderBtn = item.querySelector(".notitie-verwijder-btn");
+      let bevestigen = false;
+      let timeoutId;
+      verwijderBtn.addEventListener("click", () => {
+        if (!bevestigen) {
+          bevestigen = true;
+          verwijderBtn.textContent = "Zeker?";
+          timeoutId = setTimeout(() => { bevestigen = false; verwijderBtn.textContent = "×"; }, 3000);
+        } else {
+          clearTimeout(timeoutId);
+          verwijderNotitie(contactId, notitie.id, item);
+        }
+      });
+      return item;
+    }
+
+    async function verwijderNotitie(contactId, notitieId, itemEl) {
+      try {
+        const res = await apiFetch(`${API}?id=${contactId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ verwijderNotitieId: notitieId }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const bijgewerkt = await res.json();
+        const item = huidigeLijst.find((x) => x.id === contactId);
+        if (item) item.notities = bijgewerkt.notities;
+        itemEl.remove();
+        setStatus("Notitie verwijderd.");
+      } catch (err) {
+        setStatus("Fout bij verwijderen van notitie: " + err.message);
+      }
+    }
+
+    async function voegNotitieToe(id, notitieVeld, notitiesLijst) {
+      const tekst = notitieVeld.value.trim();
+      if (!tekst) return;
       try {
         const res = await apiFetch(`${API}?id=${id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ actie }),
+          body: JSON.stringify({ nieuweNotitie: tekst }),
         });
         if (!res.ok) throw new Error(await res.text());
-        const item = huidigeData.openstaand.find((x) => x.id === id);
-        if (item) item.actie = actie;
-        setStatus("Actie bewaard.");
+        const bijgewerkt = await res.json();
+
+        const item = huidigeLijst.find((x) => x.id === id);
+        if (item) item.notities = bijgewerkt.notities;
+
+        const laatsteNotitie = bijgewerkt.notities[bijgewerkt.notities.length - 1];
+        notitiesLijst.appendChild(maakNotitieElement(id, laatsteNotitie, notitiesLijst));
+
+        notitieVeld.value = "";
+        setStatus("Notitie toegevoegd.");
       } catch (err) {
-        setStatus("Fout bij bewaren van actie: " + err.message);
+        setStatus("Fout bij toevoegen van notitie: " + err.message);
       }
     }
 
-    async function bewaarGecontacteerd(id, gecontacteerd) {
-      try {
-        const res = await apiFetch(`${API}?id=${id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ gecontacteerd }),
-        });
-        if (!res.ok) throw new Error(await res.text());
-        const item = huidigeData.openstaand.find((x) => x.id === id);
-        if (item) item.gecontacteerd = gecontacteerd;
-        setStatus(gecontacteerd ? "Gemarkeerd als gecontacteerd." : "Markering ongedaan gemaakt.");
-      } catch (err) {
-        setStatus("Fout bij bewaren: " + err.message);
-      }
-    }
-
-    async function voegBestellingToe() {
-      const productnaam = document.getElementById("new-productnaam").value.trim();
-      const cnk = document.getElementById("new-cnk").value.trim();
-      const hoeveelheid = parseInt(document.getElementById("new-hoeveelheid").value, 10) || 1;
-      const reden = document.getElementById("new-reden").value;
+    async function voegContactToe() {
+      const arts = document.getElementById("new-arts").value.trim();
       const patient = document.getElementById("new-patient").value.trim();
-      const notitie = document.getElementById("new-notitie").value.trim();
-      const contacteren = document.getElementById("new-contacteren").checked;
-      const telefoon = document.getElementById("new-telefoon").value.trim();
-      const email = document.getElementById("new-email").value.trim();
+      const datumVeld = document.getElementById("new-datum").value;
+      const uurVeld = document.getElementById("new-uur").value;
+      const minuutVeld = document.getElementById("new-minuut").value;
+      const onderwerp = document.getElementById("new-onderwerp").value.trim();
+      const verslag = document.getElementById("new-verslag").value.trim();
 
-      if (!productnaam) {
-        setStatus("Productnaam is verplicht.");
+      if (!arts || !patient || !datumVeld || !verslag) {
+        setStatus("Naam arts, naam patiënt, datum/uur en vervolgverslag zijn verplicht.");
         return;
       }
+      const contactDatum = `${datumVeld}T${uurVeld}:${minuutVeld}`;
       setStatus("Bezig met opslaan...");
       try {
         const res = await apiFetch(API, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ productnaam, cnk, hoeveelheid, reden, patient, notitie, contacteren, telefoon, email }),
+          body: JSON.stringify({ arts, patient, contactDatum, onderwerp, verslag }),
         });
         if (!res.ok) throw new Error(await res.text());
         const nieuw = await res.json();
 
-        huidigeData.openstaand = [...huidigeData.openstaand, nieuw]
-          .sort((a, b) => (a.aangemaakt ?? "").localeCompare(b.aangemaakt ?? ""));
-        onbevestigd.push({ item: nieuw, lijstNaam: "openstaand" });
+        huidigeLijst = [nieuw, ...huidigeLijst];
+        onbevestigd.push(nieuw.id);
         renderAlles();
         setStatus("Toegevoegd.");
 
-        document.getElementById("new-productnaam").value = "";
-        document.getElementById("new-cnk").value = "";
-        document.getElementById("new-hoeveelheid").value = "1";
+        document.getElementById("new-arts").value = "";
         document.getElementById("new-patient").value = "";
-        document.getElementById("new-notitie").value = "";
-        document.getElementById("new-contacteren").checked = false;
-        document.getElementById("new-telefoon").value = "";
-        document.getElementById("new-email").value = "";
-        document.getElementById("contact-velden").style.display = "none";
+        document.getElementById("new-onderwerp").value = "";
+        document.getElementById("new-verslag").value = "";
+        vulStandaardDatumTijdIn();
 
         herbevestigOnbevestigd();
       } catch (err) {
@@ -470,42 +469,12 @@
       }
     }
 
-    async function markeerKlaar(id) {
-      setStatus("Bezig met bijwerken...");
-      try {
-        const res = await apiFetch(`${API}?id=${id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ klaar: true }),
-        });
-        if (!res.ok) throw new Error(await res.text());
-        await loadBestellingen();
-      } catch (err) {
-        setStatus("Fout bij bijwerken: " + err.message);
-      }
-    }
-
-    async function heropenBestelling(id) {
-      setStatus("Bezig met bijwerken...");
-      try {
-        const res = await apiFetch(`${API}?id=${id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ klaar: false }),
-        });
-        if (!res.ok) throw new Error(await res.text());
-        await loadBestellingen();
-      } catch (err) {
-        setStatus("Fout bij bijwerken: " + err.message);
-      }
-    }
-
-    async function verwijderBestelling(id) {
+    async function verwijderContact(id) {
       setStatus("Bezig met verwijderen...");
       try {
         const res = await apiFetch(`${API}?id=${id}`, { method: "DELETE" });
         if (!res.ok) throw new Error(await res.text());
-        await loadBestellingen();
+        await loadContacten();
       } catch (err) {
         setStatus("Fout bij verwijderen: " + err.message);
       }
@@ -524,26 +493,21 @@
           }, 3000);
         } else {
           clearTimeout(timeoutId);
-          verwijderBestelling(id);
+          verwijderContact(id);
         }
       });
     }
 
     let laatsteAfdrukType = null;
-    function afdrukken() {
-      laatsteAfdrukType = true;
-      window.print();
-    }
+    function afdrukken() { laatsteAfdrukType = true; window.print(); }
     window.addEventListener("afterprint", () => {
       if (laatsteAfdrukType) {
         document.getElementById("clear-banner").style.display = "flex";
         laatsteAfdrukType = null;
       }
     });
-    function verbergLeegBanner() {
-      document.getElementById("clear-banner").style.display = "none";
-    }
-    async function leegBestellingenboek() {
+    function verbergLeegBanner() { document.getElementById("clear-banner").style.display = "none"; }
+    async function leegContactenboek() {
       verbergLeegBanner();
       const idsLijst = Array.from(document.getElementById("geschiedenis-list").children).map((el) => el.dataset.id);
       setStatus("Bezig met leegmaken...");
@@ -552,19 +516,37 @@
           const res = await apiFetch(`${API}?id=${id}`, { method: "DELETE" });
           if (!res.ok) throw new Error(await res.text());
         }
-        await loadBestellingen();
-        setStatus("Bestellingenboek geleegd.");
+        await loadContacten();
+        setStatus("Contactenboek geleegd.");
       } catch (err) {
         setStatus("Fout bij leegmaken: " + err.message);
       }
     }
 
-    document.getElementById("add-btn").addEventListener("click", voegBestellingToe);
-    document.getElementById("new-contacteren").addEventListener("change", (e) => {
-      document.getElementById("contact-velden").style.display = e.target.checked ? "block" : "none";
-    });
+    document.getElementById("add-btn").addEventListener("click", voegContactToe);
 
-    // ---- Login (identiek aan Magistraal, zelfde accounts) ----
+    function vulUrenlijstIn() {
+      const select = document.getElementById("new-uur");
+      select.innerHTML = "";
+      for (let h = 8; h <= 18; h++) {
+        const opt = document.createElement("option");
+        opt.value = String(h).padStart(2, "0");
+        opt.textContent = String(h).padStart(2, "0");
+        select.appendChild(opt);
+      }
+    }
+    function vulStandaardDatumTijdIn() {
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      let uur = Math.min(Math.max(now.getHours(), 8), 18);
+      let minuut = now.getMinutes() < 30 ? "00" : "30";
+      document.getElementById("new-datum").value =
+        `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+      document.getElementById("new-uur").value = pad(uur);
+      document.getElementById("new-minuut").value = minuut;
+    }
+
+    // ---- Login (identiek aan de andere modules, zelfde accounts) ----
     const PIN_LENGTE = 4;
     let ingevoerdeCode = "";
     let loginModus = "login";
@@ -572,7 +554,6 @@
     function toonLoginOverlay(tonen) {
       document.getElementById("login-overlay").style.display = tonen ? "flex" : "none";
     }
-
     function toonAangemeldAls(apotheeknaam) {
       const el = document.getElementById("aangemeld-als");
       if (sessieToken) {
@@ -580,15 +561,11 @@
           ? `Aangemeld als: <strong>${apotheeknaam}</strong> — <a href="#" id="uitloggen-link">uitloggen</a>`
           : `Aangemeld — <a href="#" id="uitloggen-link">uitloggen</a>`;
         el.style.display = "block";
-        document.getElementById("uitloggen-link").addEventListener("click", (e) => {
-          e.preventDefault();
-          uitloggen();
-        });
+        document.getElementById("uitloggen-link").addEventListener("click", (e) => { e.preventDefault(); uitloggen(); });
       } else {
         el.style.display = "none";
       }
     }
-
     function uitloggen() {
       localStorage.removeItem("magistraal-token");
       localStorage.removeItem("magistraal-apotheeknaam");
@@ -600,15 +577,11 @@
     document.querySelectorAll(".login-tab").forEach((tab) => {
       tab.addEventListener("click", () => {
         document.querySelectorAll(".login-tab").forEach((t) => {
-          t.classList.remove("active");
-          t.style.borderBottomColor = "transparent";
-          t.style.color = "#555";
-          t.style.fontWeight = "normal";
+          t.classList.remove("active"); t.style.borderBottomColor = "transparent";
+          t.style.color = "#555"; t.style.fontWeight = "normal";
         });
         tab.classList.add("active");
-        tab.style.borderBottomColor = "#2b6cb0";
-        tab.style.color = "#2b6cb0";
-        tab.style.fontWeight = "600";
+        tab.style.borderBottomColor = "#2b6cb0"; tab.style.color = "#2b6cb0"; tab.style.fontWeight = "600";
         loginModus = tab.dataset.mode;
         document.getElementById("veld-uitnodigingscode").style.display = loginModus === "register" ? "block" : "none";
         document.getElementById("login-fout").textContent = "";
@@ -624,11 +597,10 @@
         container.appendChild(dot);
       }
     }
-
     function tekenPinKeypad() {
       const container = document.getElementById("pin-keypad");
       container.innerHTML = "";
-      const toetsen = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "wis", "0", "⌫"];
+      const toetsen = ["1","2","3","4","5","6","7","8","9","wis","0","⌫"];
       for (const t of toetsen) {
         const btn = document.createElement("button");
         btn.className = "pin-toets";
@@ -644,17 +616,14 @@
         container.appendChild(btn);
       }
     }
-
     document.addEventListener("keydown", (e) => {
       if (document.getElementById("login-overlay").style.display === "none") return;
       if (document.activeElement && document.activeElement.tagName === "INPUT") return;
       if (e.key >= "0" && e.key <= "9" && ingevoerdeCode.length < PIN_LENGTE) {
-        ingevoerdeCode += e.key;
-        tekenPinDots();
+        ingevoerdeCode += e.key; tekenPinDots();
         if (ingevoerdeCode.length === PIN_LENGTE) probeerInloggen();
       } else if (e.key === "Backspace") {
-        ingevoerdeCode = ingevoerdeCode.slice(0, -1);
-        tekenPinDots();
+        ingevoerdeCode = ingevoerdeCode.slice(0, -1); tekenPinDots();
       }
     });
 
@@ -662,10 +631,7 @@
       const foutVeld = document.getElementById("login-fout");
       foutVeld.textContent = "";
       const apotheeknaam = document.getElementById("login-apotheeknaam").value.trim();
-      if (!apotheeknaam) {
-        foutVeld.textContent = "Naam van de apotheek is verplicht.";
-        return;
-      }
+      if (!apotheeknaam) { foutVeld.textContent = "Naam van de apotheek is verplicht."; return; }
       const eindpunt = loginModus === "register" ? "/api/register" : "/api/login";
       const body = loginModus === "register"
         ? { uitnodigingscode: document.getElementById("register-uitnodigingscode").value.trim(), apotheeknaam, code: ingevoerdeCode }
@@ -679,8 +645,7 @@
         const data = await res.json();
         if (!res.ok) {
           foutVeld.textContent = data.error || "Aanmelden mislukt.";
-          ingevoerdeCode = "";
-          tekenPinDots();
+          ingevoerdeCode = ""; tekenPinDots();
           return;
         }
         sessieToken = data.token;
@@ -688,23 +653,27 @@
         localStorage.setItem("magistraal-apotheeknaam", data.apotheeknaam || apotheeknaam);
         toonAangemeldAls(data.apotheeknaam || apotheeknaam);
         toonLoginOverlay(false);
-        loadBestellingen();
+        loadContacten();
       } catch (err) {
         foutVeld.textContent = "Fout bij aanmelden: " + err.message;
-        ingevoerdeCode = "";
-        tekenPinDots();
+        ingevoerdeCode = ""; tekenPinDots();
       }
     }
 
     tekenPinKeypad();
     tekenPinDots();
+    vulUrenlijstIn();
+    vulStandaardDatumTijdIn();
+
     if (sessieToken) {
       toonAangemeldAls(localStorage.getItem("magistraal-apotheeknaam"));
       toonLoginOverlay(false);
-      loadBestellingen();
+      loadContacten();
     } else {
       toonLoginOverlay(true);
     }
   </script>
+
+  <footer class="maker-balk">Gemaakt door Apr. Vannieuwenhuyse Thomas</footer>
 </body>
 </html>

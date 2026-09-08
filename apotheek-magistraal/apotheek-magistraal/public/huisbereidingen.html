@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Huisbereidingen</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 16px;
+      color: #1a1a1a;
+    }
+    h1 { font-size: 1.4rem; margin-bottom: 4px; }
+    h2 { font-size: 1.05rem; margin: 24px 0 8px; color: #333; }
+    p.subtitle { color: #666; margin-top: 0; }
+    p.uitleg { font-size: 0.85rem; color: #777; margin-top: -4px; }
+    a.module-link { font-size: 0.85rem; color: #2b6cb0; }
+
+    .formulier {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 16px;
+      display: grid;
+      gap: 12px;
+    }
+    .rij-top {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 8px;
+    }
+    label { font-size: 0.8rem; color: #555; margin-bottom: 2px; display: block; }
+    input, select {
+      width: 100%;
+      font-family: inherit;
+      font-size: 0.95rem;
+      padding: 7px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: white;
+    }
+
+    button {
+      padding: 8px 16px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #f5f5f5;
+    }
+    button.primary { background: #2b6cb0; color: white; border-color: #2b6cb0; }
+    button.danger { background: #fff; color: #c53030; border-color: #c53030; }
+    button.klein { font-size: 0.8rem; padding: 5px 10px; }
+
+    table.tabel { width: 100%; border-collapse: collapse; margin-top: 4px; }
+    table.tabel th {
+      text-align: left; font-size: 0.7rem; color: #888; font-weight: 600;
+      padding: 3px; text-transform: uppercase;
+    }
+    table.tabel td { padding: 2px 3px; vertical-align: middle; }
+    table.tabel input { padding: 5px; font-size: 0.85rem; }
+    .kol-verwijder { width: 6%; text-align: center; }
+
+    .prijs-overzicht {
+      margin-top: 4px;
+      background: #f7fafd;
+      border: 1px solid #dce8f5;
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 0.9rem;
+    }
+    .prijs-overzicht .regel { display: flex; justify-content: space-between; padding: 2px 0; }
+    .prijs-overzicht .ap { font-weight: 700; border-top: 1px solid #dce8f5; margin-top: 6px; padding-top: 6px; }
+    .prijs-overzicht .winst { font-weight: 700; color: #2b6cb0; font-size: 1.05rem; }
+    .prijs-overzicht .winst.negatief { color: #c53030; }
+
+    .recept-kaart {
+      border: 1px solid #e2e2e2;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 8px;
+    }
+    .recept-header {
+      display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .recept-naam { font-weight: 600; font-size: 1rem; }
+    .recept-winst { font-weight: 700; color: #2b6cb0; font-size: 1.05rem; }
+    .recept-winst.negatief { color: #c53030; }
+    .recept-detail { font-size: 0.85rem; color: #555; margin-top: 4px; }
+    .recept-acties { margin-top: 8px; display: flex; gap: 6px; }
+
+    #status { font-size: 0.9rem; color: #555; margin-bottom: 16px; min-height: 1.2em; }
+    .empty { color: #888; font-style: italic; }
+
+    .pin-dot {
+      width: 18px; height: 18px; border-radius: 50%;
+      border: 2px solid #2b6cb0; background: transparent; transition: background 0.15s;
+    }
+    .pin-dot.gevuld { background: #2b6cb0; }
+    .pin-toets {
+      font-size: 1.3rem; padding: 14px 0; border: 1px solid #ccc;
+      border-radius: 6px; background: #f5f5f5; cursor: pointer;
+    }
+    .pin-toets:active { background: #e2e2e2; }
+
+    footer.maker-balk {
+      margin-top: 32px;
+      padding: 10px 0;
+      border-top: 1px solid #e2e2e2;
+      text-align: center;
+      font-size: 0.78rem;
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+  <div id="login-overlay" style="position:fixed; inset:0; background:rgba(255,255,255,0.97); display:flex; align-items:center; justify-content:center; z-index:1000;">
+    <div style="max-width:340px; width:100%; padding:24px; border:1px solid #ddd; border-radius:8px; text-align:center;">
+      <h2 style="margin-top:0;">Aanmelden</h2>
+
+      <div style="display:flex; gap:4px; margin-bottom:12px; border-bottom:1px solid #ddd;">
+        <button class="login-tab active" data-mode="login" style="flex:1; padding:8px; border:none; background:none; border-bottom:2px solid #2b6cb0; color:#2b6cb0; font-weight:600; cursor:pointer;">Inloggen</button>
+        <button class="login-tab" data-mode="register" style="flex:1; padding:8px; border:none; background:none; border-bottom:2px solid transparent; color:#555; cursor:pointer;">Nieuwe apotheek</button>
+      </div>
+
+      <div style="text-align:left; margin-bottom:8px;">
+        <label for="login-apotheeknaam">Naam van je apotheek</label>
+        <input id="login-apotheeknaam" type="text" placeholder="bv. Apotheek Peeters" />
+      </div>
+
+      <div id="veld-uitnodigingscode" style="text-align:left; margin-bottom:8px; display:none;">
+        <label for="register-uitnodigingscode">Uitnodigingscode</label>
+        <input id="register-uitnodigingscode" type="text" placeholder="Code die je van mij kreeg" />
+      </div>
+
+      <p style="font-size:0.9rem; color:#666; margin-bottom:4px;">Code</p>
+      <div id="pin-dots" style="display:flex; justify-content:center; gap:12px; margin-bottom:16px;"></div>
+      <div id="pin-keypad" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:8px;"></div>
+      <p id="login-fout" style="color:#c53030; font-size:0.85rem; min-height:1.2em; margin-bottom:0;"></p>
+    </div>
+  </div>
+
+  <h1>Huisbereidingen</h1>
+  <p class="subtitle" id="aangemeld-als" style="display:none;"></p>
+  <p class="subtitle">
+    <a class="module-link" href="/">← Naar Magistraal</a> ·
+    <a class="module-link" href="/bestellingen.html">Speciale bestellingen</a> ·
+    <a class="module-link" href="/contact-arts.html">Contact arts</a> ·
+    <a class="module-link" href="/mutualiteiten.html">Mutualiteiten</a>
+  </p>
+
+  <div id="status"></div>
+
+  <div class="formulier">
+    <div class="rij-top">
+      <div>
+        <label for="recept-naam">Naam van de bereiding</label>
+        <input id="recept-naam" type="text" placeholder="bv. Borstsiroop" />
+      </div>
+      <div>
+        <label for="recept-eenheid-label">Verkoopeenheid</label>
+        <input id="recept-eenheid-label" type="text" placeholder="bv. fles, 20 gel" />
+      </div>
+      <div>
+        <label for="recept-aantal-eenheden">Aantal eenheden / bereiding</label>
+        <input id="recept-aantal-eenheden" type="number" step="1" min="1" placeholder="bv. 50" />
+      </div>
+      <div>
+        <label for="recept-verkoopprijs">Verkoopprijs (PP) per eenheid</label>
+        <input id="recept-verkoopprijs" type="number" step="0.01" min="0" placeholder="bv. 9.50" />
+      </div>
+    </div>
+
+    <div>
+      <label>Ingrediënten</label>
+      <p class="uitleg">Hoeveelheid gebruikt: geef dit in dezelfde eenheid op als de aankoopverpakking (bv. als de verpakking in gram is, geef de gebruikte hoeveelheid ook in gram — reken mg zelf om naar gram: 7500 mg = 7,5 g).</p>
+      <table class="tabel">
+        <thead>
+          <tr>
+            <th style="width:20%;">Naam</th>
+            <th style="width:14%;">Aankoopprijs (verpakking)</th>
+            <th style="width:14%;">Inhoud verpakking</th>
+            <th style="width:10%;">Eenheid</th>
+            <th style="width:10%;">BTW (%)</th>
+            <th style="width:10%;">Korting (%)</th>
+            <th style="width:14%;">Hoeveelheid in bereiding</th>
+            <th class="kol-verwijder"></th>
+          </tr>
+        </thead>
+        <tbody id="ingredienten-body"></tbody>
+      </table>
+      <button class="klein" id="ingredient-toevoegen-btn" type="button">+ Ingrediënt toevoegen</button>
+    </div>
+
+    <div>
+      <label>Extra kosten (bv. verpakking: flesje, doosje...)</label>
+      <table class="tabel">
+        <thead>
+          <tr>
+            <th style="width:70%;">Omschrijving</th>
+            <th style="width:24%;">Bedrag per eenheid (€)</th>
+            <th class="kol-verwijder"></th>
+          </tr>
+        </thead>
+        <tbody id="extra-kosten-body"></tbody>
+      </table>
+      <button class="klein" id="extra-kost-toevoegen-btn" type="button">+ Extra kost toevoegen</button>
+    </div>
+
+    <div class="rij-top" style="grid-template-columns: 1fr 1fr;">
+      <div></div>
+      <div>
+        <label for="recept-aantal-verkocht">Aantal verkocht (optioneel, voor winsttracking)</label>
+        <input id="recept-aantal-verkocht" type="number" step="1" min="0" placeholder="bv. 240" />
+      </div>
+    </div>
+
+    <div class="prijs-overzicht" id="prijs-overzicht"></div>
+
+    <div style="display:flex; gap:8px;">
+      <button class="primary" id="opslaan-btn">Recept opslaan</button>
+      <button id="annuleer-btn" style="display:none;">Annuleer bewerking</button>
+    </div>
+  </div>
+
+  <h2>Vaste recepten</h2>
+  <div id="recepten-list"></div>
+  <p class="empty" id="recepten-empty" style="display:none;">Nog geen huisbereidingen opgeslagen.</p>
+
+  <script>
+    const API = "/api/huisbereidingen";
+    const status = document.getElementById("status");
+    let sessieToken = localStorage.getItem("magistraal-token"); // gedeeld met de andere modules
+
+    function setStatus(msg) { status.textContent = msg; }
+
+    async function apiFetch(url, options = {}) {
+      const headers = { ...(options.headers || {}), Authorization: `Bearer ${sessieToken}` };
+      const res = await fetch(url, { ...options, headers, cache: "no-store" });
+      if (res.status === 401) {
+        localStorage.removeItem("magistraal-token");
+        localStorage.removeItem("magistraal-apotheeknaam");
+        sessieToken = null;
+        toonAangemeldAls(null);
+        toonLoginOverlay(true);
+        throw new Error("Sessie verlopen, gelieve opnieuw aan te melden.");
+      }
+      return res;
+    }
+
+    function euro(bedrag) {
+      return "€ " + (bedrag ?? 0).toLocaleString("nl-BE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // ---- Formulierstatus ----
+    let ingredientRijen = [];
+    let extraKostenRijen = [];
+    let bewerktReceptId = null;
+
+    function nieuweIngredientRij() {
+      return { naam: "", aankoopprijs: "", verpakkingsinhoud: "", eenheid: "", btw: "", korting: "", hoeveelheid: "" };
+    }
+    function nieuweExtraKostRij() {
+      return { naam: "", bedrag: "" };
+    }
+
+    function tekenIngredientenTabel() {
+      const body = document.getElementById("ingredienten-body");
+      body.innerHTML = "";
+      ingredientRijen.forEach((rij, index) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><input type="text" placeholder="bv. Ibuprofen" /></td>
+          <td><input type="number" step="0.01" min="0" placeholder="0.00" /></td>
+          <td><input type="number" step="0.01" min="0" placeholder="bv. 1000" /></td>
+          <td><input type="text" placeholder="g" /></td>
+          <td><input type="number" step="0.1" min="0" placeholder="0" /></td>
+          <td><input type="number" step="0.1" min="0" placeholder="0" /></td>
+          <td><input type="number" step="0.001" min="0" placeholder="0" /></td>
+          <td class="kol-verwijder"><button type="button" class="klein danger">×</button></td>
+        `;
+        const [naamI, prijsI, inhoudI, eenheidI, btwI, kortingI, hoevI] = tr.querySelectorAll("input");
+        naamI.value = rij.naam; prijsI.value = rij.aankoopprijs; inhoudI.value = rij.verpakkingsinhoud;
+        eenheidI.value = rij.eenheid; btwI.value = rij.btw; kortingI.value = rij.korting; hoevI.value = rij.hoeveelheid;
+
+        naamI.addEventListener("input", () => { rij.naam = naamI.value; });
+        eenheidI.addEventListener("input", () => { rij.eenheid = eenheidI.value; });
+        [prijsI, inhoudI, btwI, kortingI, hoevI].forEach((inp, i) => {
+          const veld = ["aankoopprijs", "verpakkingsinhoud", "btw", "korting", "hoeveelheid"][i];
+          inp.addEventListener("input", () => { rij[veld] = inp.value; herbereken(); });
+        });
+
+        tr.querySelector(".danger").addEventListener("click", () => {
+          ingredientRijen.splice(index, 1);
+          tekenIngredientenTabel();
+          herbereken();
+        });
+        body.appendChild(tr);
+      });
+    }
+
+    function tekenExtraKostenTabel() {
+      const body = document.getElementById("extra-kosten-body");
+      body.innerHTML = "";
+      extraKostenRijen.forEach((rij, index) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><input type="text" placeholder="bv. flesje + doosje" /></td>
+          <td><input type="number" step="0.01" min="0" placeholder="0.00" /></td>
+          <td class="kol-verwijder"><button type="button" class="klein danger">×</button></td>
+        `;
+        const [naamI, bedragI] = tr.querySelectorAll("input");
+        naamI.value = rij.naam; bedragI.value = rij.bedrag;
+        naamI.addEventListener("input", () => { rij.naam = naamI.value; });
+        bedragI.addEventListener("input", () => { rij.bedrag = bedragI.value; herbereken(); });
+        tr.querySelector(".danger").addEventListener("click", () => {
+          extraKostenRijen.splice(index, 1);
+          tekenExtraKostenTabel();
+          herbereken();
+        });
+        body.appendChild(tr);
+      });
+    }
+
+    // ---- Berekening (zelfde logica als de Excel-bestanden) ----
+    function berekenAP(aantalEenheden, ingredienten, extraKosten) {
+      const eenheden = Number(aantalEenheden) || 1;
+      const kostPerIngredient = ingredienten.map((i) => {
+        const prijsPerAankoopEenheid =
+          (Number(i.aankoopprijs) || 0) *
+          (1 + (Number(i.btw) || 0) / 100) *
+          (1 - (Number(i.korting) || 0) / 100) /
+          (Number(i.verpakkingsinhoud) || 1);
+        const kostVoorVolledigeBereiding = prijsPerAankoopEenheid * (Number(i.hoeveelheid) || 0);
+        return kostVoorVolledigeBereiding / eenheden;
+      });
+      const kostprijsIngredientenPerEenheid = kostPerIngredient.reduce((a, b) => a + b, 0);
+      const extraKostenTotaal = extraKosten.reduce((som, k) => som + (Number(k.bedrag) || 0), 0);
+      return kostprijsIngredientenPerEenheid + extraKostenTotaal;
+    }
+
+    function herbereken() {
+      const verkoopprijs = Number(document.getElementById("recept-verkoopprijs").value) || 0;
+      const aantalEenheden = document.getElementById("recept-aantal-eenheden").value;
+      const aantalVerkocht = Number(document.getElementById("recept-aantal-verkocht").value) || 0;
+      const ap = berekenAP(aantalEenheden, ingredientRijen, extraKostenRijen);
+      const winstPerEenheid = verkoopprijs - ap;
+      const totaleWinst = winstPerEenheid * aantalVerkocht;
+
+      const overzicht = document.getElementById("prijs-overzicht");
+      overzicht.innerHTML = `
+        <div class="regel ap"><span>Aankoopprijs (AP) per eenheid</span><span>${euro(ap)}</span></div>
+        <div class="regel"><span>Verkoopprijs (PP) per eenheid</span><span>${euro(verkoopprijs)}</span></div>
+        <div class="regel winst ${winstPerEenheid < 0 ? "negatief" : ""}"><span>Winst per eenheid</span><span>${euro(winstPerEenheid)}</span></div>
+        ${aantalVerkocht > 0 ? `<div class="regel"><span>Totale winst (${aantalVerkocht} verkocht)</span><span>${euro(totaleWinst)}</span></div>` : ""}
+      `;
+    }
+
+    document.getElementById("recept-verkoopprijs").addEventListener("input", herbereken);
+    document.getElementById("recept-aantal-eenheden").addEventListener("input", herbereken);
+    document.getElementById("recept-aantal-verkocht").addEventListener("input", herbereken);
+    document.getElementById("ingredient-toevoegen-btn").addEventListener("click", () => {
+      ingredientRijen.push(nieuweIngredientRij());
+      tekenIngredientenTabel();
+    });
+    document.getElementById("extra-kost-toevoegen-btn").addEventListener("click", () => {
+      extraKostenRijen.push(nieuweExtraKostRij());
+      tekenExtraKostenTabel();
+    });
+
+    function resetFormulier() {
+      document.getElementById("recept-naam").value = "";
+      document.getElementById("recept-eenheid-label").value = "";
+      document.getElementById("recept-aantal-eenheden").value = "";
+      document.getElementById("recept-verkoopprijs").value = "";
+      document.getElementById("recept-aantal-verkocht").value = "";
+      ingredientRijen = [nieuweIngredientRij()];
+      extraKostenRijen = [];
+      tekenIngredientenTabel();
+      tekenExtraKostenTabel();
+      herbereken();
+      bewerktReceptId = null;
+      document.getElementById("opslaan-btn").textContent = "Recept opslaan";
+      document.getElementById("annuleer-btn").style.display = "none";
+    }
+    document.getElementById("annuleer-btn").addEventListener("click", resetFormulier);
+
+    async function receptOpslaan() {
+      const naam = document.getElementById("recept-naam").value.trim();
+      const eenheidLabel = document.getElementById("recept-eenheid-label").value.trim();
+      const aantalVerkoopeenheden = document.getElementById("recept-aantal-eenheden").value;
+      const verkoopprijs = document.getElementById("recept-verkoopprijs").value;
+      const aantalVerkocht = document.getElementById("recept-aantal-verkocht").value;
+      const geldigeIngredienten = ingredientRijen.filter((i) => i.naam.trim());
+      const geldigeExtraKosten = extraKostenRijen.filter((k) => k.naam.trim());
+
+      if (!naam || geldigeIngredienten.length === 0) {
+        setStatus("Naam en minstens één ingrediënt (met naam) zijn verplicht.");
+        return;
+      }
+      setStatus("Bezig met opslaan...");
+      try {
+        const body = { naam, eenheidLabel, aantalVerkoopeenheden, verkoopprijs, aantalVerkocht, ingredienten: geldigeIngredienten, extraKosten: geldigeExtraKosten };
+        const url = bewerktReceptId ? `${API}?id=${bewerktReceptId}` : API;
+        const methode = bewerktReceptId ? "PUT" : "POST";
+        const res = await apiFetch(url, {
+          method: methode,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        setStatus(bewerktReceptId ? "Recept bijgewerkt." : "Recept opgeslagen.");
+        resetFormulier();
+        await laadRecepten();
+      } catch (err) {
+        setStatus("Fout bij opslaan: " + err.message);
+      }
+    }
+    document.getElementById("opslaan-btn").addEventListener("click", receptOpslaan);
+
+    function bewerkRecept(recept) {
+      document.getElementById("recept-naam").value = recept.naam;
+      document.getElementById("recept-eenheid-label").value = recept.eenheidLabel || "";
+      document.getElementById("recept-aantal-eenheden").value = recept.aantalVerkoopeenheden;
+      document.getElementById("recept-verkoopprijs").value = recept.verkoopprijs;
+      document.getElementById("recept-aantal-verkocht").value = recept.aantalVerkocht || "";
+      ingredientRijen = recept.ingredienten.map((i) => ({ ...i }));
+      extraKostenRijen = (recept.extraKosten || []).map((k) => ({ ...k }));
+      tekenIngredientenTabel();
+      tekenExtraKostenTabel();
+      herbereken();
+      bewerktReceptId = recept.id;
+      document.getElementById("opslaan-btn").textContent = "Wijzigingen opslaan";
+      document.getElementById("annuleer-btn").style.display = "inline-block";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    async function verwijderRecept(id) {
+      setStatus("Bezig met verwijderen...");
+      try {
+        const res = await apiFetch(`${API}?id=${id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error(await res.text());
+        await laadRecepten();
+      } catch (err) {
+        setStatus("Fout bij verwijderen: " + err.message);
+      }
+    }
+    function koppelVerwijderKnop(button, id) {
+      let bevestigen = false;
+      let timeoutId;
+      button.addEventListener("click", () => {
+        if (!bevestigen) {
+          bevestigen = true;
+          button.textContent = "Zeker? Klik opnieuw";
+          timeoutId = setTimeout(() => { bevestigen = false; button.textContent = "Verwijderen"; }, 3000);
+        } else {
+          clearTimeout(timeoutId);
+          verwijderRecept(id);
+        }
+      });
+    }
+
+    async function laadRecepten() {
+      setStatus("Bezig met laden...");
+      try {
+        const res = await apiFetch(`${API}?_=${Date.now()}`);
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        renderRecepten(data.lijst);
+        setStatus("Bijgewerkt om " + new Date().toLocaleTimeString());
+      } catch (err) {
+        setStatus("Fout bij laden: " + err.message);
+      }
+    }
+
+    function renderRecepten(lijst) {
+      const container = document.getElementById("recepten-list");
+      const empty = document.getElementById("recepten-empty");
+      container.innerHTML = "";
+      empty.style.display = lijst.length === 0 ? "block" : "none";
+      for (const recept of lijst) {
+        const ap = berekenAP(recept.aantalVerkoopeenheden, recept.ingredienten, recept.extraKosten || []);
+        const winstPerEenheid = (recept.verkoopprijs || 0) - ap;
+        const totaleWinst = winstPerEenheid * (recept.aantalVerkocht || 0);
+        const el = document.createElement("div");
+        el.className = "recept-kaart";
+        el.innerHTML = `
+          <div class="recept-header">
+            <span class="recept-naam"></span>
+            <span class="recept-winst ${winstPerEenheid < 0 ? "negatief" : ""}"></span>
+          </div>
+          <div class="recept-detail"></div>
+          <div class="recept-acties">
+            <button class="klein bewerk-btn">Bewerken</button>
+            <button class="klein danger delete-btn">Verwijderen</button>
+          </div>
+        `;
+        el.querySelector(".recept-naam").textContent = recept.naam + (recept.eenheidLabel ? ` (${recept.eenheidLabel})` : "");
+        el.querySelector(".recept-winst").textContent = "Winst/eenheid: " + euro(winstPerEenheid);
+        el.querySelector(".recept-detail").textContent =
+          `${recept.ingredienten.length} ingrediënt(en) · AP ${euro(ap)} · PP ${euro(recept.verkoopprijs)}` +
+          (recept.aantalVerkocht ? ` · ${recept.aantalVerkocht} verkocht · totale winst ${euro(totaleWinst)}` : "");
+        el.querySelector(".bewerk-btn").addEventListener("click", () => bewerkRecept(recept));
+        koppelVerwijderKnop(el.querySelector(".delete-btn"), recept.id);
+        container.appendChild(el);
+      }
+    }
+
+    // ---- Login (identiek aan de andere modules, zelfde accounts) ----
+    const PIN_LENGTE = 4;
+    let ingevoerdeCode = "";
+    let loginModus = "login";
+
+    function toonLoginOverlay(tonen) {
+      document.getElementById("login-overlay").style.display = tonen ? "flex" : "none";
+    }
+    function toonAangemeldAls(apotheeknaam) {
+      const el = document.getElementById("aangemeld-als");
+      if (sessieToken) {
+        el.innerHTML = apotheeknaam
+          ? `Aangemeld als: <strong>${apotheeknaam}</strong> — <a href="#" id="uitloggen-link">uitloggen</a>`
+          : `Aangemeld — <a href="#" id="uitloggen-link">uitloggen</a>`;
+        el.style.display = "block";
+        document.getElementById("uitloggen-link").addEventListener("click", (e) => { e.preventDefault(); uitloggen(); });
+      } else {
+        el.style.display = "none";
+      }
+    }
+    function uitloggen() {
+      localStorage.removeItem("magistraal-token");
+      localStorage.removeItem("magistraal-apotheeknaam");
+      sessieToken = null;
+      toonAangemeldAls(null);
+      toonLoginOverlay(true);
+    }
+
+    document.querySelectorAll(".login-tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".login-tab").forEach((t) => {
+          t.classList.remove("active"); t.style.borderBottomColor = "transparent";
+          t.style.color = "#555"; t.style.fontWeight = "normal";
+        });
+        tab.classList.add("active");
+        tab.style.borderBottomColor = "#2b6cb0"; tab.style.color = "#2b6cb0"; tab.style.fontWeight = "600";
+        loginModus = tab.dataset.mode;
+        document.getElementById("veld-uitnodigingscode").style.display = loginModus === "register" ? "block" : "none";
+        document.getElementById("login-fout").textContent = "";
+      });
+    });
+
+    function tekenPinDots() {
+      const container = document.getElementById("pin-dots");
+      container.innerHTML = "";
+      for (let i = 0; i < PIN_LENGTE; i++) {
+        const dot = document.createElement("div");
+        dot.className = "pin-dot" + (i < ingevoerdeCode.length ? " gevuld" : "");
+        container.appendChild(dot);
+      }
+    }
+    function tekenPinKeypad() {
+      const container = document.getElementById("pin-keypad");
+      container.innerHTML = "";
+      const toetsen = ["1","2","3","4","5","6","7","8","9","wis","0","⌫"];
+      for (const t of toetsen) {
+        const btn = document.createElement("button");
+        btn.className = "pin-toets";
+        btn.textContent = t === "wis" ? "Wis" : t;
+        btn.addEventListener("click", () => {
+          if (t === "⌫") ingevoerdeCode = ingevoerdeCode.slice(0, -1);
+          else if (t === "wis") ingevoerdeCode = "";
+          else if (ingevoerdeCode.length < PIN_LENGTE) ingevoerdeCode += t;
+          tekenPinDots();
+          document.getElementById("login-fout").textContent = "";
+          if (ingevoerdeCode.length === PIN_LENGTE) probeerInloggen();
+        });
+        container.appendChild(btn);
+      }
+    }
+    document.addEventListener("keydown", (e) => {
+      if (document.getElementById("login-overlay").style.display === "none") return;
+      if (document.activeElement && document.activeElement.tagName === "INPUT") return;
+      if (e.key >= "0" && e.key <= "9" && ingevoerdeCode.length < PIN_LENGTE) {
+        ingevoerdeCode += e.key; tekenPinDots();
+        if (ingevoerdeCode.length === PIN_LENGTE) probeerInloggen();
+      } else if (e.key === "Backspace") {
+        ingevoerdeCode = ingevoerdeCode.slice(0, -1); tekenPinDots();
+      }
+    });
+
+    async function probeerInloggen() {
+      const foutVeld = document.getElementById("login-fout");
+      foutVeld.textContent = "";
+      const apotheeknaam = document.getElementById("login-apotheeknaam").value.trim();
+      if (!apotheeknaam) { foutVeld.textContent = "Naam van de apotheek is verplicht."; return; }
+      const eindpunt = loginModus === "register" ? "/api/register" : "/api/login";
+      const body = loginModus === "register"
+        ? { uitnodigingscode: document.getElementById("register-uitnodigingscode").value.trim(), apotheeknaam, code: ingevoerdeCode }
+        : { apotheeknaam, code: ingevoerdeCode };
+      try {
+        const res = await fetch(eindpunt, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          foutVeld.textContent = data.error || "Aanmelden mislukt.";
+          ingevoerdeCode = ""; tekenPinDots();
+          return;
+        }
+        sessieToken = data.token;
+        localStorage.setItem("magistraal-token", sessieToken);
+        localStorage.setItem("magistraal-apotheeknaam", data.apotheeknaam || apotheeknaam);
+        toonAangemeldAls(data.apotheeknaam || apotheeknaam);
+        toonLoginOverlay(false);
+        laadRecepten();
+      } catch (err) {
+        foutVeld.textContent = "Fout bij aanmelden: " + err.message;
+        ingevoerdeCode = ""; tekenPinDots();
+      }
+    }
+
+    tekenPinKeypad();
+    tekenPinDots();
+    resetFormulier();
+
+    if (sessieToken) {
+      toonAangemeldAls(localStorage.getItem("magistraal-apotheeknaam"));
+      toonLoginOverlay(false);
+      laadRecepten();
+    } else {
+      toonLoginOverlay(true);
+    }
+  </script>
+
+  <footer class="maker-balk">Gemaakt door Apr. Vannieuwenhuyse Thomas</footer>
+</body>
+</html>

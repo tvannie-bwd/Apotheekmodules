@@ -1,9 +1,8 @@
 import { getStore } from "@netlify/blobs";
 
-// Hergebruikt exact hetzelfde login-systeem als magistraal.js (zelfde
-// apotheek-accounts, zelfde TOKEN_SECRET). Enkel de datastore is anders:
-// per apotheek een eigen store "bestellingen-<apotheekId>".
-const KEY_PREFIX = "bestelling-";
+// Hergebruikt exact hetzelfde login-systeem als de andere modules (zelfde
+// apotheek-accounts, zelfde TOKEN_SECRET). Eigen store per apotheek.
+const KEY_PREFIX = "contact-";
 
 async function hmacHex(bericht, geheim) {
   const key = await crypto.subtle.importKey(
@@ -34,32 +33,24 @@ export default async (req) => {
     apotheekId = id;
   }
 
-  const store = getStore(`bestellingen-${apotheekId}`);
+  const store = getStore(`contact-arts-${apotheekId}`);
   const url = new URL(req.url);
   const id = url.searchParams.get("id");
 
   if (req.method === "GET") {
     if (id) {
-      const bestelling = await store.get(KEY_PREFIX + id, { type: "json" });
-      if (!bestelling) return json({ error: "Niet gevonden." }, 404);
-      return json(bestelling);
+      const contact = await store.get(KEY_PREFIX + id, { type: "json" });
+      if (!contact) return json({ error: "Niet gevonden." }, 404);
+      return json(contact);
     }
     const { blobs } = await store.list({ prefix: KEY_PREFIX });
     const opgehaald = await Promise.all(
       blobs.map((b) => store.get(b.key, { type: "json" }))
     );
-    const alles = opgehaald.filter(Boolean);
+    const alles = opgehaald.filter(Boolean)
+      .sort((a, b) => (b.contactDatum ?? "").localeCompare(a.contactDatum ?? ""));
 
-    // Openstaand: oudste registratie eerst (FIFO). Boek: meest recent
-    // afgevinkt eerst.
-    const openstaand = alles
-      .filter((b) => !b.klaar)
-      .sort((a, b) => (a.aangemaakt ?? "").localeCompare(b.aangemaakt ?? ""));
-    const geschiedenis = alles
-      .filter((b) => b.klaar)
-      .sort((a, b) => (b.klaarOp ?? "").localeCompare(a.klaarOp ?? ""));
-
-    return json({ openstaand, geschiedenis });
+    return json({ lijst: alles });
   }
 
   if (req.method === "POST") {
@@ -69,33 +60,23 @@ export default async (req) => {
     } catch {
       return json({ error: "Ongeldige JSON in request body." }, 400);
     }
-    if (!body.productnaam) {
-      return json({ error: "Productnaam is verplicht." }, 400);
-    }
-    if (body.reden !== "ontbrekend" && body.reden !== "speciaal") {
-      return json({ error: "Reden moet 'ontbrekend' of 'speciaal' zijn." }, 400);
+    if (!body.arts || !body.patient || !body.contactDatum || !body.verslag) {
+      return json({ error: "Naam arts, naam patiënt, datum/uur en vervolgverslag zijn verplicht." }, 400);
     }
     const now = new Date().toISOString();
-    const bestelling = {
+    const contact = {
       id: crypto.randomUUID(),
-      productnaam: body.productnaam,
-      cnk: body.cnk ?? "",
-      hoeveelheid: body.hoeveelheid ?? 1,
-      reden: body.reden, // "ontbrekend" of "speciaal"
-      patient: body.patient ?? "",
-      notitie: body.notitie ?? "",
-      actie: "",
-      contacteren: body.contacteren ?? false,
-      telefoon: body.telefoon ?? "",
-      email: body.email ?? "",
-      gecontacteerd: false,
-      klaar: false,
-      klaarOp: null,
+      arts: body.arts,
+      patient: body.patient,
+      contactDatum: body.contactDatum, // ISO datum+uur van het telefonisch contact
+      onderwerp: body.onderwerp ?? "",
+      verslag: body.verslag,
+      notities: [],
       aangemaakt: now,
       bijgewerkt: now,
     };
-    await store.setJSON(KEY_PREFIX + bestelling.id, bestelling);
-    return json(bestelling, 201);
+    await store.setJSON(KEY_PREFIX + contact.id, contact);
+    return json(contact, 201);
   }
 
   if (req.method === "PUT") {
@@ -109,28 +90,18 @@ export default async (req) => {
       return json({ error: "Ongeldige JSON in request body." }, 400);
     }
 
-    const wordtNuKlaarGemeld = body.klaar === true && !existing.klaar;
-    const wordtHeropend = body.klaar === false && existing.klaar;
-
     const updated = {
       ...existing,
-      productnaam: body.productnaam ?? existing.productnaam,
-      cnk: body.cnk ?? existing.cnk,
-      hoeveelheid: body.hoeveelheid ?? existing.hoeveelheid,
-      reden: body.reden ?? existing.reden,
+      arts: body.arts ?? existing.arts,
       patient: body.patient ?? existing.patient,
-      notitie: body.notitie ?? existing.notitie,
-      actie: body.actie ?? existing.actie,
-      contacteren: body.contacteren ?? existing.contacteren,
-      telefoon: body.telefoon ?? existing.telefoon,
-      email: body.email ?? existing.email,
-      gecontacteerd: body.gecontacteerd ?? existing.gecontacteerd,
-      klaar: body.klaar ?? existing.klaar,
-      klaarOp: wordtNuKlaarGemeld
-        ? new Date().toISOString()
-        : wordtHeropend
-        ? null
-        : existing.klaarOp,
+      contactDatum: body.contactDatum ?? existing.contactDatum,
+      onderwerp: body.onderwerp ?? existing.onderwerp,
+      verslag: body.verslag ?? existing.verslag,
+      notities: body.nieuweNotitie
+        ? [...(existing.notities ?? []), { id: crypto.randomUUID(), tekst: body.nieuweNotitie, datum: new Date().toISOString() }]
+        : body.verwijderNotitieId
+        ? (existing.notities ?? []).filter((n) => n.id !== body.verwijderNotitieId)
+        : (existing.notities ?? []),
       bijgewerkt: new Date().toISOString(),
     };
     await store.setJSON(KEY_PREFIX + id, updated);
@@ -157,5 +128,5 @@ function json(data, status = 200) {
 }
 
 export const config = {
-  path: "/api/bestellingen",
+  path: "/api/contact-arts",
 };
