@@ -131,6 +131,9 @@
     .contact-blok a { color: #7a5c00; font-weight: 600; }
     .contact-blok label { display: flex; align-items: center; gap: 4px; margin: 0; color: #7a5c00; }
     .contact-blok input[type="checkbox"] { width: auto; }
+    .geschiedenis-titel { justify-content: flex-start; gap: 8px; }
+    .geschiedenis-titel .toggle-icoon { color: #999; font-size: 0.8rem; }
+    .geschiedenis-detail { margin-top: 8px; }
     .meta { font-size: 0.74rem; color: #999; margin-top: 4px; }
     .bestelling-actions { margin-top: 6px; }
 
@@ -359,95 +362,148 @@
       container.innerHTML = "";
       empty.style.display = lijst.length === 0 ? "block" : "none";
       for (const b of lijst) {
-        const el = document.createElement("div");
-        el.className = "bestelling";
-        el.dataset.id = b.id;
-        const checkboxAttrs = opties.toonActies ? "" : "checked";
-        el.innerHTML = `
-          <input type="checkbox" ${checkboxAttrs} title="${opties.toonActies ? "Markeer als besteld/ontvangen" : "Terugzetten naar openstaand"}" />
-          <div class="bestelling-body">
+        const el = opties.toonActies ? maakOpenstaandKaart(b, opties) : maakGeschiedenisKaart(b, opties);
+        container.appendChild(el);
+      }
+    }
+
+    function maakOpenstaandKaart(b, opties) {
+      const el = document.createElement("div");
+      el.className = "bestelling";
+      el.dataset.id = b.id;
+      el.innerHTML = `
+        <input type="checkbox" title="Markeer als besteld/ontvangen" />
+        <div class="bestelling-body">
+          <div class="bestelling-header">
+            <span class="item-naam"></span>
+            <span class="reden-badge"></span>
+            <span class="hoeveelheid"></span>
+          </div>
+          <div class="notitie"></div>
+          <div class="contact-plek"></div>
+          <div class="actie-veld">
+            <label>Opmerkingen / opvolging</label>
+            <div class="opmerkingen-lijst"></div>
+            <div class="opmerking-toevoegen">
+              <input type="text" class="nieuwe-opmerking-veld" placeholder="Nieuwe opmerking toevoegen..." />
+              <button class="opmerking-btn">Toevoegen</button>
+            </div>
+          </div>
+          <div class="meta"></div>
+          <div class="bestelling-actions"><button class="danger delete-btn">Verwijderen</button></div>
+        </div>
+      `;
+      el.querySelector(".item-naam").textContent = b.productnaam
+        + (b.cnk ? ` (CNK ${b.cnk})` : "")
+        + (b.patient ? ` — ${b.patient}` : "");
+      const badge = el.querySelector(".reden-badge");
+      const redenLabels = { ontbrekend: "Ontbrekend", speciaal: "Speciaal", klacht: "Klacht", administratie: "Administratie" };
+      badge.textContent = redenLabels[b.reden] || b.reden;
+      badge.classList.add(b.reden);
+      el.querySelector(".hoeveelheid").textContent = "Aantal: " + b.hoeveelheid;
+      el.querySelector(".notitie").textContent = b.notitie || "";
+
+      const match = vindLeverancierMatch(b.productnaam);
+      if (match && match.link) {
+        const bestelBtn = document.createElement("button");
+        bestelBtn.className = "primary klein";
+        bestelBtn.textContent = "🛒 Direct bestellen";
+        bestelBtn.addEventListener("click", () => window.open(match.link, "_blank", "noopener,noreferrer"));
+        el.querySelector(".bestelling-actions").prepend(bestelBtn);
+      }
+
+      if (b.contacteren) {
+        const contactPlek = el.querySelector(".contact-plek");
+        const checkboxId = `gecontacteerd-${b.id}`;
+        contactPlek.innerHTML = `
+          <div class="contact-blok">
+            <span>Patiënt contacteren</span>
+            <label><input type="checkbox" id="${checkboxId}" ${b.gecontacteerd ? "checked" : ""}/> Gecontacteerd</label>
+          </div>
+        `;
+        contactPlek.querySelector('input[type="checkbox"]').addEventListener("change", (e) => bewaarGecontacteerd(b.id, e.target.checked));
+      }
+      el.querySelector(".meta").textContent = "Geregistreerd: " + formatDatumTijd(b.aangemaakt);
+
+      const opmerkingenLijst = el.querySelector(".opmerkingen-lijst");
+      for (const o of b.opmerkingen || []) {
+        opmerkingenLijst.appendChild(maakOpmerkingElement(b.id, o));
+      }
+      const opmerkingVeld = el.querySelector(".nieuwe-opmerking-veld");
+      const opmerkingToevoegen = () => voegOpmerkingToe(b.id, opmerkingVeld, opmerkingenLijst);
+      el.querySelector(".opmerking-btn").addEventListener("click", opmerkingToevoegen);
+      opmerkingVeld.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") opmerkingToevoegen();
+      });
+      el.querySelector('input[type="checkbox"]').addEventListener("change", () => markeerKlaar(b.id));
+      koppelVerwijderKnop(el.querySelector(".delete-btn"), b.id);
+
+      return el;
+    }
+
+    function maakGeschiedenisKaart(b, opties) {
+      const el = document.createElement("div");
+      el.className = "bestelling";
+      el.dataset.id = b.id;
+      el.innerHTML = `
+        <div class="bestelling-body">
+          <div class="bestelling-header geschiedenis-titel" style="cursor:pointer;">
+            <span class="item-naam"></span>
+            <span class="toggle-icoon">▸</span>
+          </div>
+          <div class="geschiedenis-detail" style="display:none;">
             <div class="bestelling-header">
-              <span class="item-naam"></span>
               <span class="reden-badge"></span>
               <span class="hoeveelheid"></span>
             </div>
             <div class="notitie"></div>
             <div class="contact-plek"></div>
-            ${opties.toonActies
-              ? `<div class="actie-veld">
-                   <label>Opmerkingen / opvolging</label>
-                   <div class="opmerkingen-lijst"></div>
-                   <div class="opmerking-toevoegen">
-                     <input type="text" class="nieuwe-opmerking-veld" placeholder="Nieuwe opmerking toevoegen..." />
-                     <button class="opmerking-btn">Toevoegen</button>
-                   </div>
-                 </div>`
-              : `<div class="actie-tekst"></div>`
-            }
+            <div class="actie-tekst"></div>
             <div class="meta"></div>
-            ${opties.toonActies ? '<div class="bestelling-actions"><button class="danger delete-btn">Verwijderen</button></div>' : ""}
+            <div class="bestelling-actions">
+              <label><input type="checkbox" checked /> Terugzetten naar openstaand</label>
+            </div>
+          </div>
+        </div>
+      `;
+      el.querySelector(".item-naam").textContent = b.productnaam
+        + (b.cnk ? ` (CNK ${b.cnk})` : "")
+        + (b.patient ? ` — ${b.patient}` : "");
+      const badge = el.querySelector(".reden-badge");
+      const redenLabels = { ontbrekend: "Ontbrekend", speciaal: "Speciaal", klacht: "Klacht", administratie: "Administratie" };
+      badge.textContent = redenLabels[b.reden] || b.reden;
+      badge.classList.add(b.reden);
+      el.querySelector(".hoeveelheid").textContent = "Aantal: " + b.hoeveelheid;
+      el.querySelector(".notitie").textContent = b.notitie || "";
+
+      if (b.contacteren) {
+        const contactPlek = el.querySelector(".contact-plek");
+        contactPlek.innerHTML = `
+          <div class="contact-blok">
+            <span>Patiënt contacteren</span>
+            ${b.gecontacteerd ? "<strong>✓ Gecontacteerd</strong>" : ""}
           </div>
         `;
-        el.querySelector(".item-naam").textContent = b.productnaam
-          + (b.cnk ? ` (CNK ${b.cnk})` : "")
-          + (b.patient ? ` — ${b.patient}` : "");
-        const badge = el.querySelector(".reden-badge");
-        const redenLabels = { ontbrekend: "Ontbrekend", speciaal: "Speciaal", klacht: "Klacht", administratie: "Administratie" };
-        badge.textContent = redenLabels[b.reden] || b.reden;
-        badge.classList.add(b.reden);
-        el.querySelector(".hoeveelheid").textContent = "Aantal: " + b.hoeveelheid;
-        el.querySelector(".notitie").textContent = b.notitie || "";
-
-        if (opties.toonActies) {
-          const match = vindLeverancierMatch(b.productnaam);
-          if (match && match.link) {
-            const bestelBtn = document.createElement("button");
-            bestelBtn.className = "primary klein";
-            bestelBtn.textContent = "🛒 Direct bestellen";
-            bestelBtn.addEventListener("click", () => window.open(match.link, "_blank", "noopener,noreferrer"));
-            el.querySelector(".bestelling-actions").prepend(bestelBtn);
-          }
-        }
-
-        if (b.contacteren) {
-          const contactPlek = el.querySelector(".contact-plek");
-          const checkboxId = `gecontacteerd-${b.id}`;
-          contactPlek.innerHTML = `
-            <div class="contact-blok">
-              <span>Patiënt contacteren</span>
-              ${opties.toonActies ? `<label><input type="checkbox" id="${checkboxId}" ${b.gecontacteerd ? "checked" : ""}/> Gecontacteerd</label>` : (b.gecontacteerd ? "<strong>✓ Gecontacteerd</strong>" : "")}
-            </div>
-          `;
-          if (opties.toonActies) {
-            contactPlek.querySelector('input[type="checkbox"]').addEventListener("change", (e) => bewaarGecontacteerd(b.id, e.target.checked));
-          }
-        }
-        el.querySelector(".meta").textContent = opties.toonActies
-          ? "Geregistreerd: " + formatDatumTijd(b.aangemaakt)
-          : "Afgewerkt: " + formatDatumTijd(b.klaarOp);
-
-        if (opties.toonActies) {
-          const opmerkingenLijst = el.querySelector(".opmerkingen-lijst");
-          for (const o of b.opmerkingen || []) {
-            opmerkingenLijst.appendChild(maakOpmerkingElement(b.id, o));
-          }
-          const opmerkingVeld = el.querySelector(".nieuwe-opmerking-veld");
-          const opmerkingToevoegen = () => voegOpmerkingToe(b.id, opmerkingVeld, opmerkingenLijst);
-          el.querySelector(".opmerking-btn").addEventListener("click", opmerkingToevoegen);
-          opmerkingVeld.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") opmerkingToevoegen();
-          });
-          el.querySelector('input[type="checkbox"]').addEventListener("change", () => markeerKlaar(b.id));
-          koppelVerwijderKnop(el.querySelector(".delete-btn"), b.id);
-        } else {
-          const actieTekst = el.querySelector(".actie-tekst");
-          actieTekst.innerHTML = (b.opmerkingen || [])
-            .map((o) => `<div><strong>${formatDatumTijd(o.datum)}:</strong> ${o.tekst.replace(/</g, "&lt;")}</div>`)
-            .join("");
-          el.querySelector('input[type="checkbox"]').addEventListener("change", () => heropenBestelling(b.id));
-        }
-        container.appendChild(el);
       }
+      el.querySelector(".meta").textContent = "Afgewerkt: " + formatDatumTijd(b.klaarOp);
+
+      const actieTekst = el.querySelector(".actie-tekst");
+      actieTekst.innerHTML = (b.opmerkingen || [])
+        .map((o) => `<div><strong>${formatDatumTijd(o.datum)}:</strong> ${o.tekst.replace(/</g, "&lt;")}</div>`)
+        .join("");
+
+      el.querySelector('input[type="checkbox"]').addEventListener("change", () => heropenBestelling(b.id));
+
+      const titel = el.querySelector(".geschiedenis-titel");
+      const detail = el.querySelector(".geschiedenis-detail");
+      const icoon = el.querySelector(".toggle-icoon");
+      titel.addEventListener("click", () => {
+        const opengeklapt = detail.style.display !== "none";
+        detail.style.display = opengeklapt ? "none" : "block";
+        icoon.textContent = opengeklapt ? "▸" : "▾";
+      });
+
+      return el;
     }
 
     function maakOpmerkingElement(bestellingId, opmerking) {
