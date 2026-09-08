@@ -72,8 +72,8 @@ export default async (req) => {
     if (!body.productnaam) {
       return json({ error: "Productnaam is verplicht." }, 400);
     }
-    if (body.reden !== "ontbrekend" && body.reden !== "speciaal") {
-      return json({ error: "Reden moet 'ontbrekend' of 'speciaal' zijn." }, 400);
+    if (!["ontbrekend", "speciaal", "klacht", "administratie"].includes(body.reden)) {
+      return json({ error: "Reden moet 'ontbrekend', 'speciaal', 'klacht' of 'administratie' zijn." }, 400);
     }
     const now = new Date().toISOString();
     const bestelling = {
@@ -85,9 +85,8 @@ export default async (req) => {
       patient: body.patient ?? "",
       notitie: body.notitie ?? "",
       actie: "",
+      opmerkingen: [],
       contacteren: body.contacteren ?? false,
-      telefoon: body.telefoon ?? "",
-      email: body.email ?? "",
       gecontacteerd: false,
       klaar: false,
       klaarOp: null,
@@ -121,9 +120,12 @@ export default async (req) => {
       patient: body.patient ?? existing.patient,
       notitie: body.notitie ?? existing.notitie,
       actie: body.actie ?? existing.actie,
+      opmerkingen: body.nieuweOpmerking
+        ? [...(existing.opmerkingen ?? []), { id: crypto.randomUUID(), tekst: body.nieuweOpmerking, datum: new Date().toISOString() }]
+        : body.verwijderOpmerkingId
+        ? (existing.opmerkingen ?? []).filter((o) => o.id !== body.verwijderOpmerkingId)
+        : (existing.opmerkingen ?? []),
       contacteren: body.contacteren ?? existing.contacteren,
-      telefoon: body.telefoon ?? existing.telefoon,
-      email: body.email ?? existing.email,
       gecontacteerd: body.gecontacteerd ?? existing.gecontacteerd,
       klaar: body.klaar ?? existing.klaar,
       klaarOp: wordtNuKlaarGemeld

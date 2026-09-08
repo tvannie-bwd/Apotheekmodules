@@ -101,14 +101,27 @@
     }
     .reden-badge.ontbrekend { background: #fde2e2; color: #c53030; }
     .reden-badge.speciaal { background: #e0ecfb; color: #2b6cb0; }
+    .reden-badge.klacht { background: #fdf0d5; color: #a16207; }
+    .reden-badge.administratie { background: #e8e6f5; color: #5b3fa8; }
     .hoeveelheid { font-size: 0.82rem; color: #555; font-weight: 600; }
     .notitie { color: #444; margin: 4px 0 0; white-space: pre-wrap; font-size: 0.9rem; }
     .actie-veld { margin-top: 6px; }
     .actie-veld label { font-size: 0.78rem; color: #2b6cb0; font-weight: 600; margin-bottom: 2px; }
-    .actie-veld textarea {
-      min-height: 40px; font-size: 0.88rem; padding: 6px;
-      border: 1px solid #cfe0f5; border-radius: 4px; background: #f7fafd;
+    .opmerkingen-lijst { margin-top: 4px; }
+    .opmerking-item {
+      background: #f7fafd; border: 1px solid #dce8f5; border-radius: 4px;
+      padding: 6px 8px; margin-bottom: 4px; font-size: 0.85rem;
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;
     }
+    .opmerking-item .opmerking-datum { color: #2b6cb0; font-size: 0.72rem; font-weight: 600; display: block; margin-bottom: 2px; }
+    .opmerking-item .opmerking-inhoud { flex: 1; }
+    .opmerking-verwijder-btn {
+      font-size: 0.72rem; padding: 2px 6px; border: 1px solid #e0b0b0; color: #c53030;
+      background: white; border-radius: 3px; cursor: pointer; white-space: nowrap;
+    }
+    .opmerking-toevoegen { display: flex; gap: 6px; margin-top: 6px; }
+    .opmerking-toevoegen input { flex: 1; font-size: 0.88rem; padding: 6px; }
+    .opmerking-toevoegen button { font-size: 0.85rem; padding: 6px 10px; white-space: nowrap; }
     .actie-tekst { color: #2b6cb0; font-size: 0.88rem; margin-top: 4px; white-space: pre-wrap; }
     .actie-tekst strong { font-weight: 600; }
     .contact-blok {
@@ -123,6 +136,14 @@
 
     #status { font-size: 0.9rem; color: #555; margin-bottom: 16px; min-height: 1.2em; }
     .empty { color: #888; font-style: italic; }
+    footer.maker-balk {
+      margin-top: 32px;
+      padding: 10px 0;
+      border-top: 1px solid #e2e2e2;
+      text-align: center;
+      font-size: 0.78rem;
+      color: #999;
+    }
 
     .pin-dot {
       width: 18px; height: 18px; border-radius: 50%;
@@ -136,7 +157,7 @@
     .pin-toets:active { background: #e2e2e2; }
 
     @media print {
-      .tabs, .formulier, #status, .print-btn, .clear-banner, a.module-link { display: none !important; }
+      .tabs, .formulier, #status, .print-btn, .clear-banner, a.module-link, footer.maker-balk { display: none !important; }
       .heading-openstaand, #openstaand-list, #openstaand-empty { display: none !important; }
       input[type="checkbox"], .bestelling-actions { display: none !important; }
       .bestelling { break-inside: avoid; border-color: #999; }
@@ -173,7 +194,7 @@
 
   <h1>Speciale bestellingen</h1>
   <p class="subtitle" id="aangemeld-als" style="display:none;"></p>
-  <p class="subtitle"><a class="module-link" href="/">← Naar Magistraal</a></p>
+  <p class="subtitle"><a class="module-link" href="/">← Naar Magistraal</a> · <a class="module-link" href="/contact-arts.html">Contact arts</a> · <a class="module-link" href="/mutualiteiten.html">Mutualiteiten</a> · <a class="module-link" href="/huisbereidingen.html">Huisbereidingen →</a></p>
 
   <div id="status"></div>
 
@@ -196,6 +217,8 @@
         <select id="new-reden">
           <option value="ontbrekend">Ontbrekend</option>
           <option value="speciaal">Speciaal te bestellen</option>
+          <option value="klacht">Klacht product</option>
+          <option value="administratie">Administratie</option>
         </select>
       </div>
     </div>
@@ -206,18 +229,6 @@
     <div style="display:flex; align-items:center; gap:6px;">
       <input id="new-contacteren" type="checkbox" style="width:auto;" />
       <label for="new-contacteren" style="margin:0;">Patiënt moet gecontacteerd worden</label>
-    </div>
-    <div id="contact-velden" style="display:none;">
-      <div class="row" style="grid-template-columns: 1fr 1fr;">
-        <div>
-          <label for="new-telefoon">Telefoon</label>
-          <input id="new-telefoon" type="tel" placeholder="bv. 0470 12 34 56" />
-        </div>
-        <div>
-          <label for="new-email">E-mail</label>
-          <input id="new-email" type="email" placeholder="bv. naam@voorbeeld.be" />
-        </div>
-      </div>
     </div>
     <div>
       <label for="new-notitie">Notitie (optioneel)</label>
@@ -337,8 +348,12 @@
             <div class="contact-plek"></div>
             ${opties.toonActies
               ? `<div class="actie-veld">
-                   <label>Actie ondernomen</label>
-                   <textarea placeholder="bv. nabesteld bij groothandel X, telefonisch gecontacteerd..."></textarea>
+                   <label>Opmerkingen / opvolging</label>
+                   <div class="opmerkingen-lijst"></div>
+                   <div class="opmerking-toevoegen">
+                     <input type="text" class="nieuwe-opmerking-veld" placeholder="Nieuwe opmerking toevoegen..." />
+                     <button class="opmerking-btn">Toevoegen</button>
+                   </div>
                  </div>`
               : `<div class="actie-tekst"></div>`
             }
@@ -350,26 +365,23 @@
           + (b.cnk ? ` (CNK ${b.cnk})` : "")
           + (b.patient ? ` — ${b.patient}` : "");
         const badge = el.querySelector(".reden-badge");
-        badge.textContent = b.reden === "ontbrekend" ? "Ontbrekend" : "Speciaal";
+        const redenLabels = { ontbrekend: "Ontbrekend", speciaal: "Speciaal", klacht: "Klacht", administratie: "Administratie" };
+        badge.textContent = redenLabels[b.reden] || b.reden;
         badge.classList.add(b.reden);
         el.querySelector(".hoeveelheid").textContent = "Aantal: " + b.hoeveelheid;
         el.querySelector(".notitie").textContent = b.notitie || "";
 
         if (b.contacteren) {
           const contactPlek = el.querySelector(".contact-plek");
-          const linkjes = [];
-          if (b.telefoon) linkjes.push(`<a href="tel:${b.telefoon.replace(/\s+/g, "")}">📞 ${b.telefoon}</a>`);
-          if (b.email) linkjes.push(`<a href="mailto:${b.email}">✉️ ${b.email}</a>`);
           const checkboxId = `gecontacteerd-${b.id}`;
           contactPlek.innerHTML = `
             <div class="contact-blok">
-              <span>Patiënt contacteren${linkjes.length ? ":" : ""}</span>
-              ${linkjes.join(" ")}
+              <span>Patiënt contacteren</span>
               ${opties.toonActies ? `<label><input type="checkbox" id="${checkboxId}" ${b.gecontacteerd ? "checked" : ""}/> Gecontacteerd</label>` : (b.gecontacteerd ? "<strong>✓ Gecontacteerd</strong>" : "")}
             </div>
           `;
           if (opties.toonActies) {
-            document.getElementById(checkboxId).addEventListener("change", (e) => bewaarGecontacteerd(b.id, e.target.checked));
+            contactPlek.querySelector('input[type="checkbox"]').addEventListener("change", (e) => bewaarGecontacteerd(b.id, e.target.checked));
           }
         }
         el.querySelector(".meta").textContent = opties.toonActies
@@ -377,33 +389,97 @@
           : "Afgewerkt: " + formatDatumTijd(b.klaarOp);
 
         if (opties.toonActies) {
-          const actieVeld = el.querySelector(".actie-veld textarea");
-          actieVeld.value = b.actie || "";
-          actieVeld.addEventListener("blur", () => bewaarActie(b.id, actieVeld.value));
+          const opmerkingenLijst = el.querySelector(".opmerkingen-lijst");
+          for (const o of b.opmerkingen || []) {
+            opmerkingenLijst.appendChild(maakOpmerkingElement(b.id, o));
+          }
+          const opmerkingVeld = el.querySelector(".nieuwe-opmerking-veld");
+          const opmerkingToevoegen = () => voegOpmerkingToe(b.id, opmerkingVeld, opmerkingenLijst);
+          el.querySelector(".opmerking-btn").addEventListener("click", opmerkingToevoegen);
+          opmerkingVeld.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") opmerkingToevoegen();
+          });
           el.querySelector('input[type="checkbox"]').addEventListener("change", () => markeerKlaar(b.id));
           koppelVerwijderKnop(el.querySelector(".delete-btn"), b.id);
         } else {
           const actieTekst = el.querySelector(".actie-tekst");
-          actieTekst.innerHTML = b.actie ? `<strong>Actie:</strong> ${b.actie.replace(/</g, "&lt;")}` : "";
+          actieTekst.innerHTML = (b.opmerkingen || [])
+            .map((o) => `<div><strong>${formatDatumTijd(o.datum)}:</strong> ${o.tekst.replace(/</g, "&lt;")}</div>`)
+            .join("");
           el.querySelector('input[type="checkbox"]').addEventListener("change", () => heropenBestelling(b.id));
         }
         container.appendChild(el);
       }
     }
 
-    async function bewaarActie(id, actie) {
+    function maakOpmerkingElement(bestellingId, opmerking) {
+      const item = document.createElement("div");
+      item.className = "opmerking-item";
+      item.innerHTML = `
+        <div class="opmerking-inhoud">
+          <span class="opmerking-datum"></span>
+          <span class="opmerking-tekst"></span>
+        </div>
+        <button class="opmerking-verwijder-btn">×</button>
+      `;
+      item.querySelector(".opmerking-datum").textContent = formatDatumTijd(opmerking.datum);
+      item.querySelector(".opmerking-tekst").textContent = opmerking.tekst;
+
+      const verwijderBtn = item.querySelector(".opmerking-verwijder-btn");
+      let bevestigen = false;
+      let timeoutId;
+      verwijderBtn.addEventListener("click", () => {
+        if (!bevestigen) {
+          bevestigen = true;
+          verwijderBtn.textContent = "Zeker?";
+          timeoutId = setTimeout(() => { bevestigen = false; verwijderBtn.textContent = "×"; }, 3000);
+        } else {
+          clearTimeout(timeoutId);
+          verwijderOpmerking(bestellingId, opmerking.id, item);
+        }
+      });
+      return item;
+    }
+
+    async function voegOpmerkingToe(id, opmerkingVeld, opmerkingenLijst) {
+      const tekst = opmerkingVeld.value.trim();
+      if (!tekst) return;
       try {
         const res = await apiFetch(`${API}?id=${id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ actie }),
+          body: JSON.stringify({ nieuweOpmerking: tekst }),
         });
         if (!res.ok) throw new Error(await res.text());
+        const bijgewerkt = await res.json();
         const item = huidigeData.openstaand.find((x) => x.id === id);
-        if (item) item.actie = actie;
-        setStatus("Actie bewaard.");
+        if (item) item.opmerkingen = bijgewerkt.opmerkingen;
+
+        const laatste = bijgewerkt.opmerkingen[bijgewerkt.opmerkingen.length - 1];
+        opmerkingenLijst.appendChild(maakOpmerkingElement(id, laatste));
+
+        opmerkingVeld.value = "";
+        setStatus("Opmerking toegevoegd.");
       } catch (err) {
-        setStatus("Fout bij bewaren van actie: " + err.message);
+        setStatus("Fout bij toevoegen van opmerking: " + err.message);
+      }
+    }
+
+    async function verwijderOpmerking(bestellingId, opmerkingId, itemEl) {
+      try {
+        const res = await apiFetch(`${API}?id=${bestellingId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ verwijderOpmerkingId: opmerkingId }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const bijgewerkt = await res.json();
+        const item = huidigeData.openstaand.find((x) => x.id === bestellingId);
+        if (item) item.opmerkingen = bijgewerkt.opmerkingen;
+        itemEl.remove();
+        setStatus("Opmerking verwijderd.");
+      } catch (err) {
+        setStatus("Fout bij verwijderen van opmerking: " + err.message);
       }
     }
 
@@ -431,8 +507,6 @@
       const patient = document.getElementById("new-patient").value.trim();
       const notitie = document.getElementById("new-notitie").value.trim();
       const contacteren = document.getElementById("new-contacteren").checked;
-      const telefoon = document.getElementById("new-telefoon").value.trim();
-      const email = document.getElementById("new-email").value.trim();
 
       if (!productnaam) {
         setStatus("Productnaam is verplicht.");
@@ -443,7 +517,7 @@
         const res = await apiFetch(API, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ productnaam, cnk, hoeveelheid, reden, patient, notitie, contacteren, telefoon, email }),
+          body: JSON.stringify({ productnaam, cnk, hoeveelheid, reden, patient, notitie, contacteren }),
         });
         if (!res.ok) throw new Error(await res.text());
         const nieuw = await res.json();
@@ -460,9 +534,6 @@
         document.getElementById("new-patient").value = "";
         document.getElementById("new-notitie").value = "";
         document.getElementById("new-contacteren").checked = false;
-        document.getElementById("new-telefoon").value = "";
-        document.getElementById("new-email").value = "";
-        document.getElementById("contact-velden").style.display = "none";
 
         herbevestigOnbevestigd();
       } catch (err) {
@@ -560,9 +631,6 @@
     }
 
     document.getElementById("add-btn").addEventListener("click", voegBestellingToe);
-    document.getElementById("new-contacteren").addEventListener("change", (e) => {
-      document.getElementById("contact-velden").style.display = e.target.checked ? "block" : "none";
-    });
 
     // ---- Login (identiek aan Magistraal, zelfde accounts) ----
     const PIN_LENGTE = 4;
@@ -706,5 +774,7 @@
       toonLoginOverlay(true);
     }
   </script>
+
+  <footer class="maker-balk">Gemaakt door Apr. Vannieuwenhuyse Thomas</footer>
 </body>
 </html>
