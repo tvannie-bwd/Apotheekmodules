@@ -85,6 +85,7 @@ export default async (req) => {
       patient: body.patient ?? "",
       notitie: body.notitie ?? "",
       actie: "",
+      opmerkingen: [],
       contacteren: body.contacteren ?? false,
       gecontacteerd: false,
       klaar: false,
@@ -119,6 +120,11 @@ export default async (req) => {
       patient: body.patient ?? existing.patient,
       notitie: body.notitie ?? existing.notitie,
       actie: body.actie ?? existing.actie,
+      opmerkingen: body.nieuweOpmerking
+        ? [...(existing.opmerkingen ?? []), { id: crypto.randomUUID(), tekst: body.nieuweOpmerking, datum: new Date().toISOString() }]
+        : body.verwijderOpmerkingId
+        ? (existing.opmerkingen ?? []).filter((o) => o.id !== body.verwijderOpmerkingId)
+        : (existing.opmerkingen ?? []),
       contacteren: body.contacteren ?? existing.contacteren,
       gecontacteerd: body.gecontacteerd ?? existing.gecontacteerd,
       klaar: body.klaar ?? existing.klaar,
