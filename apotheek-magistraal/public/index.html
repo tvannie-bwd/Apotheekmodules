@@ -110,6 +110,9 @@
 
     .overdue { border-color: #e53e3e; }
     .overdue .afhaal-datum { color: #e53e3e; }
+    .boek-titel { justify-content: flex-start; gap: 8px; }
+    .boek-titel .toggle-icoon { color: #999; font-size: 0.8rem; }
+    .boek-detail { margin-top: 8px; }
 
     #status { font-size: 0.9rem; color: #555; margin-bottom: 16px; min-height: 1.2em; }
     .empty { color: #888; font-style: italic; }
@@ -161,6 +164,8 @@
       .heading-openstaand, #patient-openstaand-list, #patient-openstaand-empty,
       #voorraad-openstaand-list, #voorraad-openstaand-empty { display: none !important; }
       input[type="checkbox"], .bereiding-actions { display: none !important; }
+      .boek-detail { display: block !important; }
+      .toggle-icoon { display: none !important; }
       .bereiding { break-inside: avoid; border-color: #999; }
       p.subtitle, p.testnote { display: none !important; }
     }
@@ -548,41 +553,78 @@
       container.innerHTML = "";
       empty.style.display = lijst.length === 0 ? "block" : "none";
       for (const b of lijst) {
-        const el = document.createElement("div");
-        el.dataset.id = b.id;
-        const magVerlopen = opties.toonActies && opties.toonVerlopen && isVerlopen(b.datumAfhaling);
-        el.className = "bereiding" + (magVerlopen ? " overdue" : "");
-        const checkboxAttrs = opties.toonActies ? "" : "checked";
-        el.innerHTML = `
-          <input type="checkbox" ${checkboxAttrs} title="${opties.toonActies ? "Markeer als klaar" : "Terugzetten naar openstaand"}" />
-          <div class="bereiding-body">
+        const el = opties.toonActies ? maakOpenstaandKaart(b, opties) : maakBoekKaart(b, opties);
+        container.appendChild(el);
+      }
+    }
+
+    function maakOpenstaandKaart(b, opties) {
+      const el = document.createElement("div");
+      el.dataset.id = b.id;
+      const magVerlopen = opties.toonVerlopen && isVerlopen(b.datumAfhaling);
+      el.className = "bereiding" + (magVerlopen ? " overdue" : "");
+      el.innerHTML = `
+        <input type="checkbox" title="Markeer als klaar" />
+        <div class="bereiding-body">
+          <div class="bereiding-header">
+            <span class="item-naam"></span>
+            <span class="dag-voluit"></span>
+            <span class="afhaal-datum"></span>
+          </div>
+          <div class="notitie"></div>
+          <div class="meta"></div>
+          <div class="bereiding-actions"><button class="danger delete-btn">Verwijderen</button></div>
+        </div>
+      `;
+      el.querySelector(".item-naam").textContent = itemNaam(b);
+      el.querySelector(".dag-voluit").textContent = dagVoluit(b.datumAfhaling);
+      el.querySelector(".afhaal-datum").textContent = opties.labelPrefix + formatDatum(b.datumAfhaling);
+      el.querySelector(".notitie").textContent = b.notitie || "";
+      el.querySelector(".meta").textContent = "Aangemaakt: " + formatDatumTijd(b.aangemaakt);
+      el.querySelector('input[type="checkbox"]').addEventListener("change", () => markeerKlaar(b.id));
+      koppelVerwijderKnop(el.querySelector(".delete-btn"), b.id);
+      return el;
+    }
+
+    function maakBoekKaart(b, opties) {
+      const el = document.createElement("div");
+      el.dataset.id = b.id;
+      el.className = "bereiding";
+      el.innerHTML = `
+        <div class="bereiding-body">
+          <div class="bereiding-header boek-titel" style="cursor:pointer;">
+            <span class="item-naam"></span>
+            <span class="toggle-icoon">▸</span>
+          </div>
+          <div class="boek-detail" style="display:none;">
             <div class="bereiding-header">
-              <span class="item-naam"></span>
-              <span class="${opties.toonActies ? "dag-voluit" : "dag-afkorting"}"></span>
+              <span class="dag-afkorting"></span>
               <span class="afhaal-datum"></span>
             </div>
             <div class="notitie"></div>
             <div class="meta"></div>
-            ${opties.toonActies ? '<div class="bereiding-actions"><button class="danger delete-btn">Verwijderen</button></div>' : ""}
+            <div class="bereiding-actions">
+              <label><input type="checkbox" checked /> Terugzetten naar openstaand</label>
+            </div>
           </div>
-        `;
-        el.querySelector(".item-naam").textContent = itemNaam(b);
-        el.querySelector(opties.toonActies ? ".dag-voluit" : ".dag-afkorting").textContent =
-          opties.toonActies ? dagVoluit(b.datumAfhaling) : dagAfkorting(b.datumAfhaling);
-        el.querySelector(".afhaal-datum").textContent = opties.labelPrefix + formatDatum(b.datumAfhaling);
-        el.querySelector(".notitie").textContent = b.notitie || "";
-        el.querySelector(".meta").textContent = opties.aangemaakt
-          ? "Aangemaakt: " + formatDatumTijd(b.aangemaakt)
-          : "Klaar gemeld: " + formatDatumTijd(b.klaarOp);
+        </div>
+      `;
+      el.querySelector(".item-naam").textContent = itemNaam(b);
+      el.querySelector(".dag-afkorting").textContent = dagAfkorting(b.datumAfhaling);
+      el.querySelector(".afhaal-datum").textContent = opties.labelPrefix + formatDatum(b.datumAfhaling);
+      el.querySelector(".notitie").textContent = b.notitie || "";
+      el.querySelector(".meta").textContent = "Klaar gemeld: " + formatDatumTijd(b.klaarOp);
+      el.querySelector('input[type="checkbox"]').addEventListener("change", () => heropenBereiding(b.id));
 
-        if (opties.toonActies) {
-          el.querySelector('input[type="checkbox"]').addEventListener("change", () => markeerKlaar(b.id));
-          koppelVerwijderKnop(el.querySelector(".delete-btn"), b.id);
-        } else {
-          el.querySelector('input[type="checkbox"]').addEventListener("change", () => heropenBereiding(b.id));
-        }
-        container.appendChild(el);
-      }
+      const titel = el.querySelector(".boek-titel");
+      const detail = el.querySelector(".boek-detail");
+      const icoon = el.querySelector(".toggle-icoon");
+      titel.addEventListener("click", () => {
+        const opengeklapt = detail.style.display !== "none";
+        detail.style.display = opengeklapt ? "none" : "block";
+        icoon.textContent = opengeklapt ? "▸" : "▾";
+      });
+      return el;
     }
 
     async function voegBereidingToe(type) {
