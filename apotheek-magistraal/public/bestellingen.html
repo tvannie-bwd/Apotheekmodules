@@ -200,7 +200,7 @@
 
   <h1>Speciale bestellingen</h1>
   <p class="subtitle" id="aangemeld-als" style="display:none;"></p>
-  <p class="subtitle"><a class="module-link" href="/">← Naar Magistraal</a> · <a class="module-link" href="/contact-arts.html">Contact arts</a> · <a class="module-link" href="/mutualiteiten.html">Mutualiteiten</a> · <a class="module-link" href="/huisbereidingen.html">Huisbereidingen →</a></p>
+  <p class="subtitle"><a class="module-link" href="/">← Naar Magistraal</a> · <a class="module-link" href="/contact-arts.html">Contact arts</a> · <a class="module-link" href="/mutualiteiten.html">Mutualiteiten</a> · <a class="module-link" href="/huisbereidingen.html">Huisbereidingen</a> · <a class="module-link" href="/titularis.html">Titularis</a> · <a class="module-link" href="/bandagisterie.html">Bandagisterie →</a></p>
 
   <div id="status"></div>
 
@@ -245,7 +245,20 @@
     <button class="primary" id="add-btn">Toevoegen</button>
   </div>
 
-  <h2 class="heading-openstaand">Openstaand</h2>
+  <h2 class="heading-openstaand" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+    <span>Openstaand</span>
+    <span style="font-size:0.8rem; font-weight:normal; display:flex; align-items:center; gap:6px;">
+      <label for="openstaand-sortering" style="margin:0;">Sorteren op:</label>
+      <select id="openstaand-sortering" style="padding:4px 6px; font-size:0.85rem;">
+        <option value="datum">Datum van registratie</option>
+        <option value="reden-ontbrekend">Reden: Ontbrekend</option>
+        <option value="reden-speciaal">Reden: Speciaal te bestellen</option>
+        <option value="reden-klacht">Reden: Klacht product</option>
+        <option value="reden-administratie">Reden: Administratie</option>
+        <option value="productnaam">Productnaam</option>
+      </select>
+    </span>
+  </h2>
   <div id="openstaand-list"></div>
   <p class="empty" id="openstaand-empty" style="display:none;">Geen openstaande bestellingen.</p>
 
@@ -330,10 +343,30 @@
     let huidigeData = { openstaand: [], geschiedenis: [] };
     let onbevestigd = [];
 
+    function gesorteerdeOpenstaand() {
+      const sortering = document.getElementById("openstaand-sortering").value;
+      const lijst = [...huidigeData.openstaand];
+      if (sortering.startsWith("reden-")) {
+        const gekozenReden = sortering.replace("reden-", "");
+        lijst.sort((a, b) => {
+          const aEerst = a.reden === gekozenReden ? 0 : 1;
+          const bEerst = b.reden === gekozenReden ? 0 : 1;
+          if (aEerst !== bEerst) return aEerst - bEerst;
+          return (a.aangemaakt ?? "").localeCompare(b.aangemaakt ?? "");
+        });
+      } else if (sortering === "productnaam") {
+        lijst.sort((a, b) => (a.productnaam ?? "").localeCompare(b.productnaam ?? "", "nl", { sensitivity: "base" }));
+      } else {
+        lijst.sort((a, b) => (a.aangemaakt ?? "").localeCompare(b.aangemaakt ?? ""));
+      }
+      return lijst;
+    }
+
     function renderAlles() {
-      renderLijst("openstaand-list", "openstaand-empty", huidigeData.openstaand, { toonActies: true });
+      renderLijst("openstaand-list", "openstaand-empty", gesorteerdeOpenstaand(), { toonActies: true });
       renderLijst("geschiedenis-list", "geschiedenis-empty", huidigeData.geschiedenis, { toonActies: false });
     }
+    document.getElementById("openstaand-sortering").addEventListener("change", renderAlles);
 
     async function loadBestellingen(stil = false) {
       if (!stil) setStatus("Bezig met laden...");
@@ -659,10 +692,11 @@
     async function markeerKlaar(id) {
       setStatus("Bezig met bijwerken...");
       try {
+        const bestaand = huidigeData.openstaand.find((x) => x.id === id);
         const res = await apiFetch(`${API}?id=${id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ klaar: true }),
+          body: JSON.stringify({ klaar: true, opmerkingen: bestaand ? bestaand.opmerkingen : undefined }),
         });
         if (!res.ok) throw new Error(await res.text());
         const bijgewerkt = await res.json();
@@ -678,10 +712,11 @@
     async function heropenBestelling(id) {
       setStatus("Bezig met bijwerken...");
       try {
+        const bestaand = huidigeData.geschiedenis.find((x) => x.id === id);
         const res = await apiFetch(`${API}?id=${id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ klaar: false }),
+          body: JSON.stringify({ klaar: false, opmerkingen: bestaand ? bestaand.opmerkingen : undefined }),
         });
         if (!res.ok) throw new Error(await res.text());
         const bijgewerkt = await res.json();

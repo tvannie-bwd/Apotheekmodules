@@ -1,6 +1,6 @@
-# Apotheek — Magistraal, Speciale bestellingen, Contact arts, Mutualiteiten & Huisbereidingen
+# Apotheek — Magistraal, Speciale bestellingen, Contact arts, Mutualiteiten, Huisbereidingen, Titularis & Bandagisterie
 
-Dit project bevat vijf modules die dezelfde login/apotheek-accounts delen:
+Dit project bevat zeven modules die dezelfde login/apotheek-accounts delen:
 
 - **Magistraal** (`public/index.html`, `netlify/functions/magistraal.js`):
   patiëntgebonden en voorraad-bereidingen, zie verder in dit document.
@@ -33,26 +33,74 @@ Dit project bevat vijf modules die dezelfde login/apotheek-accounts delen:
   (`PP − AP`) en desgewenst de totale winst (bij een ingegeven aantal
   verkocht) worden automatisch getoond. Recepten blijven bewaard,
   herbruikbaar en aanpasbaar; de prijs wordt altijd live herberekend.
+- **Titularis** (`public/titularis.html`, `netlify/functions/titularis.js`):
+  module met een **extra beveiligingslaag**, enkel toegankelijk voor de
+  titularis. Bovenop de gewone apotheek-login moet je hier een eigen
+  4-cijferige code ingeven die enkel jij kent. Bij het eerste bezoek stel je
+  die code zelf in; nadien moet je ze telkens ingeven om de module te
+  ontgrendelen (met een "Vergrendelen"-link om weer af te sluiten, en een
+  "Code wijzigen"-optie). De code wordt als hash bewaard in een eigen store
+  per apotheek (`titularis-<apotheekId>`), losstaand van de gewone
+  apotheek-code. **De inhoud van deze module is nog leeg** — enkel de
+  toegangsbeveiliging is gebouwd; de eigenlijke functionaliteit volgt later.
+- **Bandagisterie** (`public/bandagisterie.html`, `netlify/functions/bandagisterie.js`):
+  dagboek bandagisterie (stomamateriaal) per patiënt. Je start een dagboek
+  met naam patiënt, INSZ (optioneel), periode (standaard het lopende
+  kwartaal), en het soort stoma/categorie/fase — op basis daarvan wordt de
+  RIZIV-code en het maximumbudget automatisch voorgesteld uit een
+  aanpasbare **tarieventabel** (in te klappen bovenaan de pagina; bewaart
+  per apotheek, standaard gevuld met de officiële RIZIV-bedragen). Per
+  dagboek voeg je afleveringen toe (datum, product, CNK, bedrag) — het
+  overblijvend budget wordt automatisch bijgehouden. Ook de opvolging van
+  "Bijlage 93" (nog niet aangevraagd/verzonden/betaald) zit erbij. Een
+  kaart toont standaard enkel patiënt + overblijvend budget; klik erop om
+  alles uit te klappen. "Trimester afsluiten" verplaatst het dagboek naar
+  het **Dagboekenboek** (met "Heropenen" als het toch nog niet klaar was).
+  Per dagboek kan je een **verzamelstaat afdrukken** (klaar om als basis
+  voor de factuur via je apotheeksoftware te gebruiken).
 
-Alle vijf modules gebruiken **dezelfde login** (`/api/login`, `/api/register`,
+Alle zeven modules gebruiken **dezelfde login** (`/api/login`, `/api/register`,
 dezelfde `apotheek-accounts`-store) — eenmaal aanmelden op één pagina, en de
-andere vier herkennen je automatisch (want alle vijf bewaren het token onder
+andere zes herkennen je automatisch (want alle zeven bewaren het token onder
 dezelfde sleutel in `localStorage`). Bovenaan elke pagina staan links naar de
 andere modules.
 
 # Module 1 — Magistraal
 
-Registratie en opvolging van magistrale bereidingen, in twee tabbladen:
+Registratie en opvolging van magistrale bereidingen, in vier tabbladen:
 
 - **Nieuwe bereiding** (opent standaard): patiëntgebonden bereiding — naam
   patiënt, notitie, datum + uur van afhaling.
 - **Nieuwe voorraadbereiding**: bereiding die terug aangemaakt moet worden
   voor de voorraad — in plaats van een patiëntnaam geef je hier in **welke
   bereiding leeg is**, plus notitie en datum + uur van afhaling.
+- **Etiketten**: naam product, aantal etiketten, lotnummer, VVD (geen
+  afhaaldatum). "Openstaand" = nog niet geprint; vinkje aanzetten =
+  gemarkeerd als geprint en verplaatst naar het "Etikettenboek".
+- **Voorraadplaatsen**: doorzoekbaar/filterbaar overzicht van de voorraad
+  per voorraadplaats (`netlify/functions/voorraadplaatsen.js`, met
+  hulpbestanden `_parse-voorraad.js`, `_parse-grondstoffen.js`,
+  `_reclassify.js`). Gevuld via twee soorten CSV-upload:
+  - **"CSV-bestand uploaden"** (prijslijst per voorraadplaats): voegt
+    nieuwe CNK/voorraadplaats-combinaties toe en werkt de stock bij.
+  - **"Grondstoffenregister uploaden"**: werkt vervaldata van bestaande
+    producten bij (matching op omschrijving) en voegt nieuwe grondstoffen
+    toe onder een tijdelijke locatie "(nog toe te wijzen)" — enkel
+    grondstoffen met een vervaldatum na 31/10/2026 tellen mee. De
+    voorraadplaatsen "VRAC DOOS..." en "VRAC FRIGO VERVALLEN" worden hierbij
+    nooit aangepast.
+  - Producten waarvan de omschrijving "VERP" bevat, verhuizen automatisch
+    naar de voorraadplaats "verpakkingsmaterialen" (bij elke upload/wijziging
+    opnieuw toegepast).
+  - Klik op een product in de tabel om de voorraadplaats manueel te wijzigen;
+    "Product toevoegen" voor een nieuw product; "Verwijderen" per product
+    (met dezelfde dubbele-klik-bevestiging als de andere modules).
+  - Data per apotheek gescopet (`voorraadplaatsen-<apotheekId>`), zoals de
+    andere tabbladen.
 
-Elk tabblad heeft zijn eigen "Openstaand"-lijst (gesorteerd op datum van
-afhaling) en eigen "Bereidingenboek" (geschiedenis van afgevinkte
-bereidingen van dat type).
+Elk tabblad heeft zijn eigen "Openstaand"-lijst en eigen geschiedenis-boek
+(bij Nieuwe bereiding/voorraadbereiding gesorteerd op datum van afhaling,
+bij Etiketten op registratiemoment).
 
 ## Structuur
 

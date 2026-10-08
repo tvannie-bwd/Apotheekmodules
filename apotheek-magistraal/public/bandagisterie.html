@@ -1,0 +1,878 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bandagisterie</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 16px;
+      color: #1a1a1a;
+    }
+    h1 { font-size: 1.4rem; margin-bottom: 4px; }
+    h2 { font-size: 1.05rem; margin: 24px 0 8px; color: #333; }
+    p.subtitle { color: #666; margin-top: 0; }
+    p.uitleg { font-size: 0.85rem; color: #777; margin-top: -4px; }
+    a.module-link { font-size: 0.85rem; color: #2b6cb0; }
+
+    .formulier {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 16px;
+      display: grid;
+      gap: 10px;
+    }
+    .rij { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 8px; }
+    .rij3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    label { font-size: 0.8rem; color: #555; margin-bottom: 2px; display: block; }
+    input, select {
+      width: 100%;
+      font-family: inherit;
+      font-size: 0.95rem;
+      padding: 7px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: white;
+    }
+    button {
+      padding: 8px 16px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #f5f5f5;
+    }
+    button.primary { background: #2b6cb0; color: white; border-color: #2b6cb0; }
+    button.danger { background: #fff; color: #c53030; border-color: #c53030; }
+    button.klein { font-size: 0.82rem; padding: 5px 10px; }
+
+    .budget-hint { font-size: 0.85rem; color: #2b6cb0; margin-top: 2px; min-height: 1.2em; }
+    .budget-hint.warn { color: #c53030; }
+
+    .dagboek-kaart {
+      border: 1px solid #e2e2e2;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 8px;
+    }
+    .dagboek-header {
+      display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+      cursor: pointer;
+    }
+    .dagboek-titel { font-weight: 600; font-size: 1rem; }
+    .dagboek-budget { font-size: 0.9rem; font-weight: 600; }
+    .dagboek-budget.laag { color: #c53030; }
+    .dagboek-budget.ok { color: #2f855a; }
+    .toggle-icoon { color: #999; font-size: 0.8rem; }
+    .dagboek-detail { margin-top: 10px; display: none; }
+    .dagboek-meta { font-size: 0.8rem; color: #777; margin-bottom: 8px; }
+
+    table.afleveringen { width: 100%; border-collapse: collapse; font-size: 0.87rem; margin-bottom: 8px; }
+    table.afleveringen th { text-align: left; font-size: 0.72rem; color: #888; padding: 3px; text-transform: uppercase; }
+    table.afleveringen td { padding: 3px; }
+    table.afleveringen input { padding: 5px; font-size: 0.85rem; }
+    .kol-verwijder { width: 6%; text-align: center; }
+
+    .badge {
+      font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 12px;
+      text-transform: uppercase; display: inline-block;
+    }
+    .badge.nog_niet { background: #fde2e2; color: #c53030; }
+    .badge.verzonden { background: #e0ecfb; color: #2b6cb0; }
+    .badge.betaald { background: #e0f5e6; color: #2f855a; }
+
+    .dagboek-acties { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+
+    #tarieven-sectie { display: none; }
+    table.tarieventabel { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    table.tarieventabel th { text-align: left; font-size: 0.72rem; color: #888; padding: 4px; text-transform: uppercase; }
+    table.tarieventabel td { padding: 3px 4px; }
+    table.tarieventabel input { padding: 5px; font-size: 0.85rem; }
+
+    #status { font-size: 0.9rem; color: #555; margin-bottom: 16px; min-height: 1.2em; }
+    .empty { color: #888; font-style: italic; }
+
+    .pin-dot {
+      width: 18px; height: 18px; border-radius: 50%;
+      border: 2px solid #2b6cb0; background: transparent; transition: background 0.15s;
+    }
+    .pin-dot.gevuld { background: #2b6cb0; }
+    .pin-toets {
+      font-size: 1.3rem; padding: 14px 0; border: 1px solid #ccc;
+      border-radius: 6px; background: #f5f5f5; cursor: pointer;
+    }
+    .pin-toets:active { background: #e2e2e2; }
+
+    footer.maker-balk {
+      margin-top: 32px; padding: 10px 0; border-top: 1px solid #e2e2e2;
+      text-align: center; font-size: 0.78rem; color: #999;
+    }
+
+    #print-gebied { display: none; }
+    @media print {
+      body * { visibility: hidden; }
+      #print-gebied, #print-gebied * { visibility: visible; }
+      #print-gebied { display: block !important; position: absolute; top: 0; left: 0; width: 100%; }
+      #print-gebied table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+      #print-gebied th, #print-gebied td { border: 1px solid #999; padding: 6px 8px; text-align: left; font-size: 0.9rem; }
+      #print-gebied h1 { font-size: 1.3rem; }
+      #print-gebied .print-totaal { font-weight: 700; margin-top: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="login-overlay" style="position:fixed; inset:0; background:rgba(255,255,255,0.97); display:flex; align-items:center; justify-content:center; z-index:1000;">
+    <div style="max-width:340px; width:100%; padding:24px; border:1px solid #ddd; border-radius:8px; text-align:center;">
+      <h2 style="margin-top:0;">Aanmelden</h2>
+      <div style="display:flex; gap:4px; margin-bottom:12px; border-bottom:1px solid #ddd;">
+        <button class="login-tab active" data-mode="login" style="flex:1; padding:8px; border:none; background:none; border-bottom:2px solid #2b6cb0; color:#2b6cb0; font-weight:600; cursor:pointer;">Inloggen</button>
+        <button class="login-tab" data-mode="register" style="flex:1; padding:8px; border:none; background:none; border-bottom:2px solid transparent; color:#555; cursor:pointer;">Nieuwe apotheek</button>
+      </div>
+      <div style="text-align:left; margin-bottom:8px;">
+        <label for="login-apotheeknaam">Naam van je apotheek</label>
+        <input id="login-apotheeknaam" type="text" placeholder="bv. Apotheek Peeters" />
+      </div>
+      <div id="veld-uitnodigingscode" style="text-align:left; margin-bottom:8px; display:none;">
+        <label for="register-uitnodigingscode">Uitnodigingscode</label>
+        <input id="register-uitnodigingscode" type="text" placeholder="Code die je van mij kreeg" />
+      </div>
+      <p style="font-size:0.9rem; color:#666; margin-bottom:4px;">Code</p>
+      <div id="pin-dots" style="display:flex; justify-content:center; gap:12px; margin-bottom:16px;"></div>
+      <div id="pin-keypad" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:8px;"></div>
+      <p id="login-fout" style="color:#c53030; font-size:0.85rem; min-height:1.2em; margin-bottom:0;"></p>
+    </div>
+  </div>
+
+  <h1>Bandagisterie</h1>
+  <p class="subtitle" id="aangemeld-als" style="display:none;"></p>
+  <p class="subtitle">
+    <a class="module-link" href="/">← Naar Magistraal</a> ·
+    <a class="module-link" href="/bestellingen.html">Speciale bestellingen</a> ·
+    <a class="module-link" href="/contact-arts.html">Contact arts</a> ·
+    <a class="module-link" href="/mutualiteiten.html">Mutualiteiten</a> ·
+    <a class="module-link" href="/huisbereidingen.html">Huisbereidingen</a> ·
+    <a class="module-link" href="/titularis.html">Titularis</a>
+  </p>
+
+  <div id="status"></div>
+
+  <div class="formulier">
+    <div class="rij">
+      <div>
+        <label for="db-patient">Naam patiënt</label>
+        <input id="db-patient" type="text" placeholder="Naam patiënt" />
+      </div>
+      <div>
+        <label for="db-insz">INSZ (optioneel)</label>
+        <input id="db-insz" type="text" placeholder="INSZ-nummer" />
+      </div>
+      <div></div>
+    </div>
+    <div class="rij3">
+      <div>
+        <label for="db-periode-van">Periode van</label>
+        <input id="db-periode-van" type="date" />
+      </div>
+      <div>
+        <label for="db-periode-tot">Periode tot</label>
+        <input id="db-periode-tot" type="date" />
+      </div>
+      <div></div>
+    </div>
+    <div class="rij3">
+      <div>
+        <label for="db-stomatype">Soort stoma</label>
+        <select id="db-stomatype">
+          <option value="colostoma">Colostoma</option>
+          <option value="ileostoma">Ileostoma</option>
+          <option value="urostoma">Urostoma</option>
+        </select>
+      </div>
+      <div>
+        <label for="db-categorie">Categorie</label>
+        <select id="db-categorie">
+          <option value="basis">Basis</option>
+          <option value="convexconcaaf">Convex/concaaf</option>
+          <option value="uitzonderlijk">Uitzonderlijke toestand</option>
+          <option value="uitzonderlijk_convex">Uitzonderlijk + convex/concaaf</option>
+        </select>
+      </div>
+      <div>
+        <label for="db-fase">Fase</label>
+        <select id="db-fase">
+          <option value="eerste3maanden">Eerste 3 maanden (leerfase)</option>
+          <option value="vanaf4demaand">Vanaf 4de maand (opvolgfase)</option>
+        </select>
+      </div>
+    </div>
+    <div class="rij3">
+      <div>
+        <label for="db-rizivcode">RIZIV-code</label>
+        <input id="db-rizivcode" type="text" placeholder="wordt voorgesteld" />
+      </div>
+      <div>
+        <label for="db-maxbudget">Max budget (€)</label>
+        <input id="db-maxbudget" type="number" step="0.01" min="0" placeholder="wordt voorgesteld" />
+      </div>
+      <div></div>
+    </div>
+    <div class="budget-hint" id="db-budget-hint"></div>
+    <button class="primary" id="db-add-btn">Dagboek starten</button>
+  </div>
+
+  <h2>Openstaand (lopend trimester)</h2>
+  <div id="openstaand-list"></div>
+  <p class="empty" id="openstaand-empty" style="display:none;">Geen openstaande dagboeken.</p>
+
+  <h2>Dagboekenboek (afgesloten trimesters)</h2>
+  <div id="geschiedenis-list"></div>
+  <p class="empty" id="geschiedenis-empty" style="display:none;">Nog geen afgesloten dagboeken.</p>
+
+  <h2 style="cursor:pointer;" id="tarieven-toggle">Tarieventabel (RIZIV) bekijken/aanpassen ▸</h2>
+  <div id="tarieven-sectie">
+    <p class="uitleg">Standaardbedragen o.b.v. de "virtuele portefeuille" (RIZIV). Pas aan indien de officiële bedragen wijzigen — dit geldt dan voor nieuwe dagboeken.</p>
+    <table class="tarieventabel">
+      <thead>
+        <tr><th>Stomatype</th><th>Categorie</th><th>Fase</th><th>RIZIV-code</th><th>Bedrag (€)</th></tr>
+      </thead>
+      <tbody id="tarieven-body"></tbody>
+    </table>
+    <button class="primary" id="tarieven-opslaan-btn" style="margin-top:10px;">Tarieven opslaan</button>
+    <span id="tarieven-status" style="font-size:0.85rem; color:#2f855a; margin-left:8px;"></span>
+  </div>
+
+  <div id="print-gebied">
+    <h1 id="print-titel"></h1>
+    <div id="print-info"></div>
+    <table id="print-tabel">
+      <thead><tr><th>Datum</th><th>Product</th><th>CNK</th><th>Bedrag (€)</th></tr></thead>
+      <tbody id="print-tabel-body"></tbody>
+    </table>
+    <div class="print-totaal" id="print-totaal"></div>
+  </div>
+
+  <script>
+    const API = "/api/bandagisterie";
+    const status = document.getElementById("status");
+    let sessieToken = localStorage.getItem("magistraal-token"); // gedeeld met de andere modules
+
+    function setStatus(msg) { status.textContent = msg; }
+
+    async function apiFetch(url, options = {}) {
+      const headers = { ...(options.headers || {}), Authorization: `Bearer ${sessieToken}` };
+      const res = await fetch(url, { ...options, headers, cache: "no-store" });
+      if (res.status === 401) {
+        localStorage.removeItem("magistraal-token");
+        localStorage.removeItem("magistraal-apotheeknaam");
+        sessieToken = null;
+        toonAangemeldAls(null);
+        toonLoginOverlay(true);
+        throw new Error("Sessie verlopen, gelieve opnieuw aan te melden.");
+      }
+      return res;
+    }
+
+    function euro(bedrag) {
+      return "€ " + (bedrag ?? 0).toLocaleString("nl-BE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    function formatDatum(iso) {
+      if (!iso) return "";
+      const [y, m, d] = iso.split("-");
+      return `${d}/${m}/${y}`;
+    }
+    function formatDatumTijd(iso) {
+      if (!iso) return "";
+      return new Date(iso).toLocaleString("nl-BE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    }
+    function gebruiktBudget(dagboek) {
+      return (dagboek.afleveringen || []).reduce((som, a) => som + (Number(a.bedrag) || 0), 0);
+    }
+    function overblijvendBudget(dagboek) {
+      return (Number(dagboek.maxBudget) || 0) - gebruiktBudget(dagboek);
+    }
+    function huidigKwartaal() {
+      const now = new Date();
+      const kwartaal = Math.floor(now.getMonth() / 3);
+      const van = new Date(now.getFullYear(), kwartaal * 3, 1);
+      const tot = new Date(now.getFullYear(), kwartaal * 3 + 3, 0);
+      const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      return { van: iso(van), tot: iso(tot) };
+    }
+
+    // ---------------- Tarieventabel ----------------
+    let tarieven = [];
+    const STOMA_LABELS = { colostoma: "Colostoma", ileostoma: "Ileostoma", urostoma: "Urostoma" };
+    const CATEGORIE_LABELS = { basis: "Basis", convexconcaaf: "Convex/concaaf", uitzonderlijk: "Uitzonderlijke toestand", uitzonderlijk_convex: "Uitzonderlijk + convex/concaaf" };
+    const FASE_LABELS = { eerste3maanden: "Eerste 3 maanden", vanaf4demaand: "Vanaf 4de maand" };
+
+    async function laadTarieven() {
+      try {
+        const res = await apiFetch(`${API}?resource=tarieven&_=${Date.now()}`);
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        tarieven = data.tarieven;
+        renderTarievenTabel();
+      } catch (err) {
+        setStatus("Fout bij laden van tarieven: " + err.message);
+      }
+    }
+
+    function renderTarievenTabel() {
+      const body = document.getElementById("tarieven-body");
+      body.innerHTML = "";
+      tarieven.forEach((t, index) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${STOMA_LABELS[t.stomaType] || t.stomaType}</td>
+          <td>${CATEGORIE_LABELS[t.categorie] || t.categorie}</td>
+          <td>${FASE_LABELS[t.fase] || t.fase}</td>
+          <td><input type="text" class="tar-code" /></td>
+          <td><input type="number" step="0.01" min="0" class="tar-bedrag" /></td>
+        `;
+        tr.querySelector(".tar-code").value = t.rizivCode;
+        tr.querySelector(".tar-bedrag").value = t.bedrag;
+        tr.querySelector(".tar-code").addEventListener("input", (e) => { tarieven[index].rizivCode = e.target.value; });
+        tr.querySelector(".tar-bedrag").addEventListener("input", (e) => { tarieven[index].bedrag = Number(e.target.value) || 0; });
+        body.appendChild(tr);
+      });
+    }
+
+    document.getElementById("tarieven-toggle").addEventListener("click", () => {
+      const sectie = document.getElementById("tarieven-sectie");
+      const opengeklapt = sectie.style.display === "block";
+      sectie.style.display = opengeklapt ? "none" : "block";
+      document.getElementById("tarieven-toggle").textContent = "Tarieventabel (RIZIV) bekijken/aanpassen " + (opengeklapt ? "▸" : "▾");
+    });
+
+    document.getElementById("tarieven-opslaan-btn").addEventListener("click", async () => {
+      const statusEl = document.getElementById("tarieven-status");
+      statusEl.textContent = "Bezig met opslaan...";
+      try {
+        const res = await apiFetch(`${API}?resource=tarieven`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tarieven }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        statusEl.textContent = "Tarieven opgeslagen.";
+        setTimeout(() => { statusEl.textContent = ""; }, 3000);
+      } catch (err) {
+        statusEl.textContent = "Fout: " + err.message;
+      }
+    });
+
+    function vindTarief(stomaType, categorie, fase) {
+      return tarieven.find((t) => t.stomaType === stomaType && t.categorie === categorie && t.fase === fase) || null;
+    }
+
+    function werkBudgetVoorstelBij() {
+      const stomaType = document.getElementById("db-stomatype").value;
+      const categorie = document.getElementById("db-categorie").value;
+      const fase = document.getElementById("db-fase").value;
+      const hint = document.getElementById("db-budget-hint");
+      const match = vindTarief(stomaType, categorie, fase);
+      if (match) {
+        document.getElementById("db-rizivcode").value = match.rizivCode;
+        document.getElementById("db-maxbudget").value = match.bedrag;
+        hint.className = "budget-hint";
+        hint.textContent = `Voorgesteld o.b.v. RIZIV-tabel: ${euro(match.bedrag)} (code ${match.rizivCode}).`;
+      } else {
+        document.getElementById("db-rizivcode").value = "";
+        document.getElementById("db-maxbudget").value = "";
+        hint.className = "budget-hint warn";
+        hint.textContent = "Geen tarief gevonden voor deze combinatie — geef zelf een RIZIV-code en bedrag in.";
+      }
+    }
+    ["db-stomatype", "db-categorie", "db-fase"].forEach((id) => {
+      document.getElementById(id).addEventListener("change", werkBudgetVoorstelBij);
+    });
+
+    // ---------------- Dagboeken ----------------
+    let huidigeData = { openstaand: [], geschiedenis: [] };
+    let onbevestigd = [];
+
+    function renderAlles() {
+      renderLijst("openstaand-list", "openstaand-empty", huidigeData.openstaand, true);
+      renderLijst("geschiedenis-list", "geschiedenis-empty", huidigeData.geschiedenis, false);
+    }
+
+    async function laadDagboeken(stil = false) {
+      if (!stil) setStatus("Bezig met laden...");
+      try {
+        const res = await apiFetch(`${API}?_=${Date.now()}`);
+        if (!res.ok) throw new Error(await res.text());
+        const vers = await res.json();
+        onbevestigd = onbevestigd.filter((o) => {
+          const aanwezig = vers[o.lijstNaam].some((x) => x.id === o.item.id);
+          if (!aanwezig) vers[o.lijstNaam] = [o.item, ...vers[o.lijstNaam]];
+          return !aanwezig;
+        });
+        huidigeData = vers;
+        renderAlles();
+        setStatus("Bijgewerkt om " + new Date().toLocaleTimeString());
+      } catch (err) {
+        setStatus("Fout bij laden: " + err.message);
+      }
+    }
+
+    function renderLijst(containerId, emptyId, lijst, openstaand) {
+      const container = document.getElementById(containerId);
+      const empty = document.getElementById(emptyId);
+      container.innerHTML = "";
+      empty.style.display = lijst.length === 0 ? "block" : "none";
+      for (const d of lijst) {
+        container.appendChild(maakDagboekKaart(d, openstaand));
+      }
+    }
+
+    function maakDagboekKaart(d, openstaand) {
+      const el = document.createElement("div");
+      el.className = "dagboek-kaart";
+      el.dataset.id = d.id;
+      const gebruikt = gebruiktBudget(d);
+      const overblijvend = overblijvendBudget(d);
+      el.innerHTML = `
+        <div class="dagboek-header">
+          <span class="dagboek-titel"></span>
+          <span>
+            <span class="dagboek-budget ${overblijvend < 0 ? "laag" : "ok"}"></span>
+            <span class="toggle-icoon">▸</span>
+          </span>
+        </div>
+        <div class="dagboek-detail"></div>
+      `;
+      el.querySelector(".dagboek-titel").textContent =
+        `${d.patient}${d.insz ? " (INSZ " + d.insz + ")" : ""} — ${formatDatum(d.periodeVan)} t.e.m. ${formatDatum(d.periodeTot)}`;
+      el.querySelector(".dagboek-budget").textContent = `Overblijvend: ${euro(overblijvend)} / ${euro(d.maxBudget)}`;
+
+      const header = el.querySelector(".dagboek-header");
+      const detail = el.querySelector(".dagboek-detail");
+      const icoon = el.querySelector(".toggle-icoon");
+      let opgebouwd = false;
+      header.addEventListener("click", () => {
+        const opengeklapt = detail.style.display === "block";
+        if (!opengeklapt && !opgebouwd) {
+          bouwDagboekDetail(detail, d, openstaand);
+          opgebouwd = true;
+        }
+        detail.style.display = opengeklapt ? "none" : "block";
+        icoon.textContent = opengeklapt ? "▸" : "▾";
+      });
+      return el;
+    }
+
+    function bouwDagboekDetail(detail, d, openstaand) {
+      detail.innerHTML = `
+        <div class="dagboek-meta">
+          ${STOMA_LABELS[d.stomaType] || d.stomaType || ""} · ${CATEGORIE_LABELS[d.categorie] || d.categorie || ""} ·
+          ${FASE_LABELS[d.fase] || d.fase || ""} · RIZIV ${d.rizivCode || "-"} ·
+          <span class="badge ${d.bijlage93}"></span>
+        </div>
+        <table class="afleveringen">
+          <thead><tr><th>Datum</th><th>Product</th><th>CNK</th><th>Bedrag (€)</th><th class="kol-verwijder"></th></tr></thead>
+          <tbody class="afleveringen-body"></tbody>
+        </table>
+        <button class="klein afl-toevoegen-btn" type="button">+ Aflevering toevoegen</button>
+        <div class="dagboek-acties">
+          <label style="display:flex; align-items:center; gap:4px; font-size:0.85rem;">
+            Bijlage 93:
+            <select class="bijlage93-select">
+              <option value="nog_niet">Nog niet aangevraagd</option>
+              <option value="verzonden">Verzonden</option>
+              <option value="betaald">Betaald</option>
+            </select>
+          </label>
+          <button class="klein print-btn" type="button">🖨️ Verzamelstaat afdrukken</button>
+          ${openstaand
+            ? `<button class="klein primary afsluiten-btn" type="button">Trimester afsluiten</button>
+               <button class="klein danger delete-btn" type="button">Verwijderen</button>`
+            : `<button class="klein heropenen-btn" type="button">Heropenen</button>`}
+        </div>
+      `;
+      detail.querySelector(".badge").textContent =
+        d.bijlage93 === "verzonden" ? "Verzonden" : d.bijlage93 === "betaald" ? "Betaald" : "Nog niet";
+      detail.querySelector(".bijlage93-select").value = d.bijlage93 || "nog_niet";
+      detail.querySelector(".bijlage93-select").addEventListener("change", (e) => bewaarBijlage93(d.id, e.target.value));
+
+      const aflBody = detail.querySelector(".afleveringen-body");
+      for (const a of d.afleveringen || []) aflBody.appendChild(maakAfleveringRij(d, a, openstaand));
+      detail.querySelector(".afl-toevoegen-btn").addEventListener("click", () => {
+        const nieuw = { id: crypto.randomUUID(), datum: new Date().toISOString().slice(0, 10), product: "", cnk: "", bedrag: 0 };
+        d.afleveringen = [...(d.afleveringen || []), nieuw];
+        aflBody.appendChild(maakAfleveringRij(d, nieuw, openstaand));
+      });
+
+      detail.querySelector(".print-btn").addEventListener("click", () => vpAfdrukkenDagboek(d));
+
+      if (openstaand) {
+        koppelVerwijderKnop(detail.querySelector(".delete-btn"), () => verwijderDagboek(d.id));
+        detail.querySelector(".afsluiten-btn").addEventListener("click", () => sluitDagboekAf(d.id, d));
+      } else {
+        detail.querySelector(".heropenen-btn").addEventListener("click", () => heropenDagboek(d.id, d));
+      }
+    }
+
+    function maakAfleveringRij(dagboek, a, bewerkbaar) {
+      const tr = document.createElement("tr");
+      if (!bewerkbaar) {
+        tr.innerHTML = `<td>${formatDatum(a.datum)}</td><td>${a.product || ""}</td><td>${a.cnk || ""}</td><td>${euro(a.bedrag)}</td><td></td>`;
+        return tr;
+      }
+      tr.innerHTML = `
+        <td><input type="date" class="afl-datum" /></td>
+        <td><input type="text" class="afl-product" placeholder="Productnaam" /></td>
+        <td><input type="text" class="afl-cnk" placeholder="CNK" /></td>
+        <td><input type="number" step="0.01" min="0" class="afl-bedrag" /></td>
+        <td class="kol-verwijder"><button type="button" class="klein danger afl-verwijder">×</button></td>
+      `;
+      tr.querySelector(".afl-datum").value = a.datum || "";
+      tr.querySelector(".afl-product").value = a.product || "";
+      tr.querySelector(".afl-cnk").value = a.cnk || "";
+      tr.querySelector(".afl-bedrag").value = a.bedrag || 0;
+
+      const debounceBewaar = () => bewaarAfleveringen(dagboek);
+      tr.querySelector(".afl-datum").addEventListener("change", (e) => { a.datum = e.target.value; debounceBewaar(); });
+      tr.querySelector(".afl-product").addEventListener("change", (e) => { a.product = e.target.value; debounceBewaar(); });
+      tr.querySelector(".afl-cnk").addEventListener("change", (e) => { a.cnk = e.target.value; debounceBewaar(); });
+      tr.querySelector(".afl-bedrag").addEventListener("change", (e) => { a.bedrag = Number(e.target.value) || 0; debounceBewaar(); });
+      tr.querySelector(".afl-verwijder").addEventListener("click", () => {
+        dagboek.afleveringen = dagboek.afleveringen.filter((x) => x.id !== a.id);
+        tr.remove();
+        bewaarAfleveringen(dagboek);
+      });
+      return tr;
+    }
+
+    async function bewaarAfleveringen(dagboek) {
+      try {
+        const res = await apiFetch(`${API}?id=${dagboek.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ afleveringen: dagboek.afleveringen }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const bijgewerkt = await res.json();
+        const lijst = dagboek.klaar ? huidigeData.geschiedenis : huidigeData.openstaand;
+        const idx = lijst.findIndex((x) => x.id === dagboek.id);
+        if (idx >= 0) lijst[idx] = bijgewerkt;
+        vernieuwBudgetWeergave(dagboek.id);
+        setStatus("Bewaard.");
+      } catch (err) {
+        setStatus("Fout bij bewaren: " + err.message);
+      }
+    }
+
+    function vernieuwBudgetWeergave(id) {
+      const dagboek = [...huidigeData.openstaand, ...huidigeData.geschiedenis].find((x) => x.id === id);
+      if (!dagboek) return;
+      const kaart = document.querySelector(`.dagboek-kaart[data-id="${id}"]`);
+      if (!kaart) return;
+      const overblijvend = overblijvendBudget(dagboek);
+      const budgetEl = kaart.querySelector(".dagboek-budget");
+      budgetEl.textContent = `Overblijvend: ${euro(overblijvend)} / ${euro(dagboek.maxBudget)}`;
+      budgetEl.className = "dagboek-budget " + (overblijvend < 0 ? "laag" : "ok");
+    }
+
+    async function bewaarBijlage93(id, waarde) {
+      try {
+        const res = await apiFetch(`${API}?id=${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bijlage93: waarde }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        setStatus("Bijgewerkt.");
+      } catch (err) {
+        setStatus("Fout bij bewaren: " + err.message);
+      }
+    }
+
+    async function dagboekStarten() {
+      const patient = document.getElementById("db-patient").value.trim();
+      const insz = document.getElementById("db-insz").value.trim();
+      const periodeVan = document.getElementById("db-periode-van").value;
+      const periodeTot = document.getElementById("db-periode-tot").value;
+      const stomaType = document.getElementById("db-stomatype").value;
+      const categorie = document.getElementById("db-categorie").value;
+      const fase = document.getElementById("db-fase").value;
+      const rizivCode = document.getElementById("db-rizivcode").value.trim();
+      const maxBudget = document.getElementById("db-maxbudget").value;
+
+      if (!patient || !periodeVan || !periodeTot) {
+        setStatus("Naam patiënt en periode (van/tot) zijn verplicht.");
+        return;
+      }
+      setStatus("Bezig met opslaan...");
+      try {
+        const res = await apiFetch(API, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ patient, insz, periodeVan, periodeTot, stomaType, categorie, fase, rizivCode, maxBudget }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const nieuw = await res.json();
+        huidigeData.openstaand = [nieuw, ...huidigeData.openstaand];
+        onbevestigd.push({ item: nieuw, lijstNaam: "openstaand" });
+        renderAlles();
+        setStatus("Dagboek gestart.");
+
+        document.getElementById("db-patient").value = "";
+        document.getElementById("db-insz").value = "";
+        vulStandaardPeriodeIn();
+        document.getElementById("db-rizivcode").value = "";
+        document.getElementById("db-maxbudget").value = "";
+        document.getElementById("db-budget-hint").textContent = "";
+
+        herbevestigOnbevestigd();
+      } catch (err) {
+        setStatus("Fout bij opslaan: " + err.message);
+      }
+    }
+    document.getElementById("db-add-btn").addEventListener("click", dagboekStarten);
+
+    async function sluitDagboekAf(id, dagboekObj) {
+      try {
+        const res = await apiFetch(`${API}?id=${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ klaar: true, afleveringen: dagboekObj.afleveringen }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const bijgewerkt = await res.json();
+        huidigeData.openstaand = huidigeData.openstaand.filter((x) => x.id !== id);
+        huidigeData.geschiedenis = [bijgewerkt, ...huidigeData.geschiedenis];
+        renderAlles();
+        setStatus("Trimester afgesloten.");
+      } catch (err) {
+        setStatus("Fout bij afsluiten: " + err.message);
+      }
+    }
+
+    async function heropenDagboek(id, dagboekObj) {
+      try {
+        const res = await apiFetch(`${API}?id=${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ klaar: false, afleveringen: dagboekObj.afleveringen }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const bijgewerkt = await res.json();
+        huidigeData.geschiedenis = huidigeData.geschiedenis.filter((x) => x.id !== id);
+        huidigeData.openstaand = [bijgewerkt, ...huidigeData.openstaand];
+        renderAlles();
+        setStatus("Heropend.");
+      } catch (err) {
+        setStatus("Fout bij heropenen: " + err.message);
+      }
+    }
+
+    async function verwijderDagboek(id) {
+      try {
+        const res = await apiFetch(`${API}?id=${id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error(await res.text());
+        huidigeData.openstaand = huidigeData.openstaand.filter((x) => x.id !== id);
+        huidigeData.geschiedenis = huidigeData.geschiedenis.filter((x) => x.id !== id);
+        renderAlles();
+        setStatus("Verwijderd.");
+      } catch (err) {
+        setStatus("Fout bij verwijderen: " + err.message);
+      }
+    }
+
+    function koppelVerwijderKnop(button, actie) {
+      let bevestigen = false;
+      let timeoutId;
+      button.addEventListener("click", () => {
+        if (!bevestigen) {
+          bevestigen = true;
+          button.textContent = "Zeker? Klik opnieuw";
+          timeoutId = setTimeout(() => { bevestigen = false; button.textContent = "Verwijderen"; }, 3000);
+        } else {
+          clearTimeout(timeoutId);
+          actie();
+        }
+      });
+    }
+
+    let herbevestigBezig = false;
+    async function herbevestigOnbevestigd() {
+      if (herbevestigBezig) return;
+      herbevestigBezig = true;
+      const tussenpozen = [2000, 3000, 4000, 5000, 6000];
+      for (const wachttijd of tussenpozen) {
+        if (onbevestigd.length === 0) break;
+        await new Promise((r) => setTimeout(r, wachttijd));
+        if (onbevestigd.length === 0) break;
+        await laadDagboeken(true);
+      }
+      herbevestigBezig = false;
+    }
+
+    // ---------------- Verzamelstaat afdrukken ----------------
+    function vpAfdrukkenDagboek(d) {
+      document.getElementById("print-titel").textContent = `Verzamelstaat bandagisterie — ${d.patient}`;
+      document.getElementById("print-info").innerHTML = `
+        <p>
+          ${d.insz ? "INSZ: " + d.insz + "<br>" : ""}
+          Periode: ${formatDatum(d.periodeVan)} t.e.m. ${formatDatum(d.periodeTot)}<br>
+          ${STOMA_LABELS[d.stomaType] || ""} · ${CATEGORIE_LABELS[d.categorie] || ""} · ${FASE_LABELS[d.fase] || ""}<br>
+          RIZIV-code: ${d.rizivCode || "-"} &nbsp; Max budget: ${euro(d.maxBudget)}
+        </p>
+      `;
+      const body = document.getElementById("print-tabel-body");
+      body.innerHTML = "";
+      for (const a of d.afleveringen || []) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${formatDatum(a.datum)}</td><td>${a.product || ""}</td><td>${a.cnk || ""}</td><td>${euro(a.bedrag)}</td>`;
+        body.appendChild(tr);
+      }
+      const gebruikt = gebruiktBudget(d);
+      const overblijvend = overblijvendBudget(d);
+      document.getElementById("print-totaal").innerHTML =
+        `Totaal gebruikt: ${euro(gebruikt)} &nbsp;&nbsp; Overblijvend budget: ${euro(overblijvend)}`;
+      window.print();
+    }
+
+    function vulStandaardPeriodeIn() {
+      const { van, tot } = huidigKwartaal();
+      document.getElementById("db-periode-van").value = van;
+      document.getElementById("db-periode-tot").value = tot;
+    }
+
+    // ---- Login (identiek aan de andere modules, zelfde accounts) ----
+    const PIN_LENGTE = 4;
+    let ingevoerdeCode = "";
+    let loginModus = "login";
+
+    function toonLoginOverlay(tonen) {
+      document.getElementById("login-overlay").style.display = tonen ? "flex" : "none";
+    }
+    function toonAangemeldAls(apotheeknaam) {
+      const el = document.getElementById("aangemeld-als");
+      if (sessieToken) {
+        el.innerHTML = apotheeknaam
+          ? `Aangemeld als: <strong>${apotheeknaam}</strong> — <a href="#" id="uitloggen-link">uitloggen</a>`
+          : `Aangemeld — <a href="#" id="uitloggen-link">uitloggen</a>`;
+        el.style.display = "block";
+        document.getElementById("uitloggen-link").addEventListener("click", (e) => { e.preventDefault(); uitloggen(); });
+      } else {
+        el.style.display = "none";
+      }
+    }
+    function uitloggen() {
+      localStorage.removeItem("magistraal-token");
+      localStorage.removeItem("magistraal-apotheeknaam");
+      sessieToken = null;
+      toonAangemeldAls(null);
+      toonLoginOverlay(true);
+    }
+
+    document.querySelectorAll(".login-tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".login-tab").forEach((t) => {
+          t.classList.remove("active"); t.style.borderBottomColor = "transparent";
+          t.style.color = "#555"; t.style.fontWeight = "normal";
+        });
+        tab.classList.add("active");
+        tab.style.borderBottomColor = "#2b6cb0"; tab.style.color = "#2b6cb0"; tab.style.fontWeight = "600";
+        loginModus = tab.dataset.mode;
+        document.getElementById("veld-uitnodigingscode").style.display = loginModus === "register" ? "block" : "none";
+        document.getElementById("login-fout").textContent = "";
+      });
+    });
+
+    function tekenPinDots() {
+      const container = document.getElementById("pin-dots");
+      container.innerHTML = "";
+      for (let i = 0; i < PIN_LENGTE; i++) {
+        const dot = document.createElement("div");
+        dot.className = "pin-dot" + (i < ingevoerdeCode.length ? " gevuld" : "");
+        container.appendChild(dot);
+      }
+    }
+    function tekenPinKeypad() {
+      const container = document.getElementById("pin-keypad");
+      container.innerHTML = "";
+      const toetsen = ["1","2","3","4","5","6","7","8","9","wis","0","⌫"];
+      for (const t of toetsen) {
+        const btn = document.createElement("button");
+        btn.className = "pin-toets";
+        btn.textContent = t === "wis" ? "Wis" : t;
+        btn.addEventListener("click", () => {
+          if (t === "⌫") ingevoerdeCode = ingevoerdeCode.slice(0, -1);
+          else if (t === "wis") ingevoerdeCode = "";
+          else if (ingevoerdeCode.length < PIN_LENGTE) ingevoerdeCode += t;
+          tekenPinDots();
+          document.getElementById("login-fout").textContent = "";
+          if (ingevoerdeCode.length === PIN_LENGTE) probeerInloggen();
+        });
+        container.appendChild(btn);
+      }
+    }
+    document.addEventListener("keydown", (e) => {
+      if (document.getElementById("login-overlay").style.display === "none") return;
+      if (document.activeElement && document.activeElement.tagName === "INPUT") return;
+      if (e.key >= "0" && e.key <= "9" && ingevoerdeCode.length < PIN_LENGTE) {
+        ingevoerdeCode += e.key; tekenPinDots();
+        if (ingevoerdeCode.length === PIN_LENGTE) probeerInloggen();
+      } else if (e.key === "Backspace") {
+        ingevoerdeCode = ingevoerdeCode.slice(0, -1); tekenPinDots();
+      }
+    });
+
+    async function probeerInloggen() {
+      const foutVeld = document.getElementById("login-fout");
+      foutVeld.textContent = "";
+      const apotheeknaam = document.getElementById("login-apotheeknaam").value.trim();
+      if (!apotheeknaam) { foutVeld.textContent = "Naam van de apotheek is verplicht."; return; }
+      const eindpunt = loginModus === "register" ? "/api/register" : "/api/login";
+      const body = loginModus === "register"
+        ? { uitnodigingscode: document.getElementById("register-uitnodigingscode").value.trim(), apotheeknaam, code: ingevoerdeCode }
+        : { apotheeknaam, code: ingevoerdeCode };
+      try {
+        const res = await fetch(eindpunt, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          foutVeld.textContent = data.error || "Aanmelden mislukt.";
+          ingevoerdeCode = ""; tekenPinDots();
+          return;
+        }
+        sessieToken = data.token;
+        localStorage.setItem("magistraal-token", sessieToken);
+        localStorage.setItem("magistraal-apotheeknaam", data.apotheeknaam || apotheeknaam);
+        toonAangemeldAls(data.apotheeknaam || apotheeknaam);
+        toonLoginOverlay(false);
+        laadTarieven().then(werkBudgetVoorstelBij);
+        laadDagboeken();
+      } catch (err) {
+        foutVeld.textContent = "Fout bij aanmelden: " + err.message;
+        ingevoerdeCode = ""; tekenPinDots();
+      }
+    }
+
+    tekenPinKeypad();
+    tekenPinDots();
+    vulStandaardPeriodeIn();
+
+    if (sessieToken) {
+      toonAangemeldAls(localStorage.getItem("magistraal-apotheeknaam"));
+      toonLoginOverlay(false);
+      laadTarieven().then(werkBudgetVoorstelBij);
+      laadDagboeken();
+    } else {
+      toonLoginOverlay(true);
+    }
+  </script>
+
+  <footer class="maker-balk">Gemaakt door Apr. Vannieuwenhuyse Thomas</footer>
+</body>
+</html>

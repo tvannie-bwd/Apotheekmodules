@@ -124,6 +124,8 @@ export default async (req) => {
         ? [...(existing.opmerkingen ?? []), { id: crypto.randomUUID(), tekst: body.nieuweOpmerking, datum: new Date().toISOString() }]
         : body.verwijderOpmerkingId
         ? (existing.opmerkingen ?? []).filter((o) => o.id !== body.verwijderOpmerkingId)
+        : body.opmerkingen !== undefined
+        ? body.opmerkingen
         : (existing.opmerkingen ?? []),
       contacteren: body.contacteren ?? existing.contacteren,
       gecontacteerd: body.gecontacteerd ?? existing.gecontacteerd,

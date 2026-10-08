@@ -63,6 +63,12 @@
     table.tabel td { padding: 2px 3px; vertical-align: middle; }
     table.tabel input { padding: 5px; font-size: 0.85rem; }
     .kol-verwijder { width: 6%; text-align: center; }
+    .kol-sleep { width: 4%; text-align: center; }
+    .sleep-greep { cursor: grab; color: #999; font-size: 1rem; user-select: none; }
+    .sleep-greep:active { cursor: grabbing; }
+    tr.sleep-bezig { opacity: 0.4; }
+    tr.sleep-erboven { box-shadow: inset 0 2px 0 0 #2b6cb0; }
+    tr.sleep-eronder { box-shadow: inset 0 -2px 0 0 #2b6cb0; }
 
     .prijs-overzicht {
       margin-top: 4px;
@@ -149,7 +155,8 @@
     <a class="module-link" href="/">← Naar Magistraal</a> ·
     <a class="module-link" href="/bestellingen.html">Speciale bestellingen</a> ·
     <a class="module-link" href="/contact-arts.html">Contact arts</a> ·
-    <a class="module-link" href="/mutualiteiten.html">Mutualiteiten</a>
+    <a class="module-link" href="/mutualiteiten.html">Mutualiteiten</a> ·
+    <a class="module-link" href="/titularis.html">Titularis</a> · <a class="module-link" href="/bandagisterie.html">Bandagisterie →</a>
   </p>
 
   <div id="status"></div>
@@ -180,13 +187,13 @@
       <table class="tabel">
         <thead>
           <tr>
-            <th style="width:20%;">Naam</th>
-            <th style="width:14%;">Aankoopprijs (verpakking)</th>
-            <th style="width:14%;">Inhoud verpakking</th>
-            <th style="width:10%;">Eenheid</th>
-            <th style="width:10%;">BTW (%)</th>
-            <th style="width:10%;">Korting (%)</th>
-            <th style="width:14%;">Hoeveelheid in bereiding</th>
+            <th class="kol-sleep"></th>
+            <th style="width:22%;">Naam</th>
+            <th style="width:16%;">Aankoopprijs (verpakking)</th>
+            <th style="width:16%;">Inhoud verpakking</th>
+            <th style="width:12%;">Eenheid</th>
+            <th style="width:12%;">Korting (%)</th>
+            <th style="width:16%;">Hoeveelheid in bereiding</th>
             <th class="kol-verwijder"></th>
           </tr>
         </thead>
@@ -260,8 +267,15 @@
     let extraKostenRijen = [];
     let bewerktReceptId = null;
 
+    // BTW-shift bij bereiden: de grondstoffen worden zelf aangekocht aan 21% BTW,
+    // maar eens verwerkt tot een magistrale bereiding geldt het verlaagd tarief
+    // van 6% (geneesmiddelen). De 21% op aankoop is recupereerbaar en dus geen
+    // reële kost; de AP-berekening moet daarom vertrekken van het tarief dat na
+    // bereiding van toepassing is (6%), niet van het aankooptarief (21%).
+    const VASTE_BTW_BEREIDING = 6;
+
     function nieuweIngredientRij() {
-      return { naam: "", aankoopprijs: "", verpakkingsinhoud: "", eenheid: "", btw: "", korting: "", hoeveelheid: "" };
+      return { naam: "", aankoopprijs: "", verpakkingsinhoud: "", eenheid: "", btw: VASTE_BTW_BEREIDING, korting: "", hoeveelheid: "" };
     }
     function nieuweExtraKostRij() {
       return { naam: "", bedrag: "" };
@@ -272,24 +286,27 @@
       body.innerHTML = "";
       ingredientRijen.forEach((rij, index) => {
         const tr = document.createElement("tr");
+        tr.draggable = false;
+        tr.dataset.index = index;
         tr.innerHTML = `
+          <td class="kol-sleep"><span class="sleep-greep" title="Sleep om te herschikken">⠿</span></td>
           <td><input type="text" placeholder="bv. Ibuprofen" /></td>
           <td><input type="number" step="0.01" min="0" placeholder="0.00" /></td>
           <td><input type="number" step="0.01" min="0" placeholder="bv. 1000" /></td>
           <td><input type="text" placeholder="g" /></td>
           <td><input type="number" step="0.1" min="0" placeholder="0" /></td>
-          <td><input type="number" step="0.1" min="0" placeholder="0" /></td>
           <td><input type="number" step="0.001" min="0" placeholder="0" /></td>
           <td class="kol-verwijder"><button type="button" class="klein danger">×</button></td>
         `;
-        const [naamI, prijsI, inhoudI, eenheidI, btwI, kortingI, hoevI] = tr.querySelectorAll("input");
+        const [naamI, prijsI, inhoudI, eenheidI, kortingI, hoevI] = tr.querySelectorAll("input");
         naamI.value = rij.naam; prijsI.value = rij.aankoopprijs; inhoudI.value = rij.verpakkingsinhoud;
-        eenheidI.value = rij.eenheid; btwI.value = rij.btw; kortingI.value = rij.korting; hoevI.value = rij.hoeveelheid;
+        eenheidI.value = rij.eenheid; kortingI.value = rij.korting; hoevI.value = rij.hoeveelheid;
+        rij.btw = VASTE_BTW_BEREIDING;
 
         naamI.addEventListener("input", () => { rij.naam = naamI.value; });
         eenheidI.addEventListener("input", () => { rij.eenheid = eenheidI.value; });
-        [prijsI, inhoudI, btwI, kortingI, hoevI].forEach((inp, i) => {
-          const veld = ["aankoopprijs", "verpakkingsinhoud", "btw", "korting", "hoeveelheid"][i];
+        [prijsI, inhoudI, kortingI, hoevI].forEach((inp, i) => {
+          const veld = ["aankoopprijs", "verpakkingsinhoud", "korting", "hoeveelheid"][i];
           inp.addEventListener("input", () => { rij[veld] = inp.value; herbereken(); });
         });
 
@@ -298,6 +315,42 @@
           tekenIngredientenTabel();
           herbereken();
         });
+
+        const greep = tr.querySelector(".sleep-greep");
+        greep.addEventListener("mousedown", () => { tr.draggable = true; });
+        greep.addEventListener("mouseup", () => { tr.draggable = false; });
+        greep.addEventListener("touchstart", () => { tr.draggable = true; }, { passive: true });
+
+        tr.addEventListener("dragstart", (e) => {
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", String(index));
+          tr.classList.add("sleep-bezig");
+        });
+        tr.addEventListener("dragend", () => {
+          tr.draggable = false;
+          tr.classList.remove("sleep-bezig");
+          body.querySelectorAll("tr").forEach((r) => r.classList.remove("sleep-erboven", "sleep-eronder"));
+        });
+        tr.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+          const midden = tr.getBoundingClientRect().top + tr.getBoundingClientRect().height / 2;
+          body.querySelectorAll("tr").forEach((r) => r.classList.remove("sleep-erboven", "sleep-eronder"));
+          tr.classList.add(e.clientY < midden ? "sleep-erboven" : "sleep-eronder");
+        });
+        tr.addEventListener("drop", (e) => {
+          e.preventDefault();
+          const vanIndex = Number(e.dataTransfer.getData("text/plain"));
+          const midden = tr.getBoundingClientRect().top + tr.getBoundingClientRect().height / 2;
+          let naarIndex = index + (e.clientY < midden ? 0 : 1);
+          if (vanIndex < naarIndex) naarIndex -= 1;
+          if (vanIndex === naarIndex) return;
+          const [verplaatst] = ingredientRijen.splice(vanIndex, 1);
+          ingredientRijen.splice(naarIndex, 0, verplaatst);
+          tekenIngredientenTabel();
+          herbereken();
+        });
+
         body.appendChild(tr);
       });
     }
@@ -352,7 +405,7 @@
 
       const overzicht = document.getElementById("prijs-overzicht");
       overzicht.innerHTML = `
-        <div class="regel ap"><span>Aankoopprijs (AP) per eenheid</span><span>${euro(ap)}</span></div>
+        <div class="regel ap"><span>Aankoopprijs (AP) per eenheid <span style="font-weight:normal; font-size:0.78rem; color:#888;">(incl. 6% BTW, na bereiding)</span></span><span>${euro(ap)}</span></div>
         <div class="regel"><span>Verkoopprijs (PP) per eenheid</span><span>${euro(verkoopprijs)}</span></div>
         <div class="regel winst ${winstPerEenheid < 0 ? "negatief" : ""}"><span>Winst per eenheid</span><span>${euro(winstPerEenheid)}</span></div>
         ${aantalVerkocht > 0 ? `<div class="regel"><span>Totale winst (${aantalVerkocht} verkocht)</span><span>${euro(totaleWinst)}</span></div>` : ""}

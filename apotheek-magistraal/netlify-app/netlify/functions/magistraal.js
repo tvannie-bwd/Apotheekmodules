@@ -1,44 +1,13 @@
 import { getStore } from "@netlify/blobs";
 
-// Eén store PER APOTHEEK (bepaald via het token, zie login.js/register.js),
-// met twee "types" bereidingen:
+// Eén store voor deze module, met twee "types" bereidingen:
 // - "patient": magistrale bereiding voor een specifieke patiënt
 // - "voorraad": bereiding die terug aangemaakt moet worden voor de voorraad
+const STORE_NAME = "magistraal";
 const KEY_PREFIX = "bereiding-";
 
-async function hmacHex(bericht, geheim) {
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(geheim),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(bericht));
-  return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
 export default async (req) => {
-  const tokenSecret = process.env.TOKEN_SECRET;
-  const meegestuurdToken = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
-
-  let apotheekId;
-  if (!tokenSecret) {
-    // Dev-modus: geen TOKEN_SECRET ingesteld, iedereen deelt dezelfde
-    // ontwikkel-store zodat je makkelijker kan testen zonder eerst een
-    // apotheek-account aan te maken.
-    apotheekId = "dev";
-  } else {
-    const [id, signature] = meegestuurdToken.split(".");
-    if (!id || !signature) return json({ error: "Niet ingelogd of sessie verlopen." }, 401);
-    const verwachteSignature = await hmacHex(id, tokenSecret);
-    if (signature !== verwachteSignature) {
-      return json({ error: "Niet ingelogd of sessie verlopen." }, 401);
-    }
-    apotheekId = id;
-  }
-
-  const store = getStore(`magistraal-${apotheekId}`);
+  const store = getStore(STORE_NAME);
   const url = new URL(req.url);
   const id = url.searchParams.get("id");
 
@@ -49,10 +18,9 @@ export default async (req) => {
       return json(bereiding);
     }
     const { blobs } = await store.list({ prefix: KEY_PREFIX });
-    const opgehaald = await Promise.all(
+    const alles = await Promise.all(
       blobs.map((b) => store.get(b.key, { type: "json" }))
     );
-    const alles = opgehaald.filter(Boolean); // net verwijderde items kunnen hier nog even als null opduiken
     const sorteerOpenstaand = (a, b) => (a.datumAfhaling ?? "").localeCompare(b.datumAfhaling ?? "");
     const sorteerGeschiedenis = (a, b) => (b.klaarOp ?? "").localeCompare(a.klaarOp ?? "");
 
@@ -60,10 +28,8 @@ export default async (req) => {
     const patientGeschiedenis = alles.filter((b) => b.type === "patient" && b.klaar).sort(sorteerGeschiedenis);
     const voorraadOpenstaand = alles.filter((b) => b.type === "voorraad" && !b.klaar).sort(sorteerOpenstaand);
     const voorraadGeschiedenis = alles.filter((b) => b.type === "voorraad" && b.klaar).sort(sorteerGeschiedenis);
-    const etiketOpenstaand = alles.filter((b) => b.type === "etiket" && !b.klaar).sort((a, b) => (b.aangemaakt ?? "").localeCompare(a.aangemaakt ?? ""));
-    const etiketGeschiedenis = alles.filter((b) => b.type === "etiket" && b.klaar).sort(sorteerGeschiedenis);
 
-    return json({ patientOpenstaand, patientGeschiedenis, voorraadOpenstaand, voorraadGeschiedenis, etiketOpenstaand, etiketGeschiedenis });
+    return json({ patientOpenstaand, patientGeschiedenis, voorraadOpenstaand, voorraadGeschiedenis });
   }
 
   if (req.method === "POST") {
@@ -73,8 +39,8 @@ export default async (req) => {
     } catch {
       return json({ error: "Ongeldige JSON in request body." }, 400);
     }
-    if (body.type !== "patient" && body.type !== "voorraad" && body.type !== "etiket") {
-      return json({ error: "Veld 'type' moet 'patient', 'voorraad' of 'etiket' zijn." }, 400);
+    if (body.type !== "patient" && body.type !== "voorraad") {
+      return json({ error: "Veld 'type' moet 'patient' of 'voorraad' zijn." }, 400);
     }
     if (body.type === "patient" && !body.patient) {
       return json({ error: "Naam patiënt is verplicht." }, 400);
@@ -82,10 +48,7 @@ export default async (req) => {
     if (body.type === "voorraad" && !body.bereidingNaam) {
       return json({ error: "Naam van de bereiding is verplicht." }, 400);
     }
-    if (body.type === "etiket" && !body.productnaam) {
-      return json({ error: "Naam product is verplicht." }, 400);
-    }
-    if (body.type !== "etiket" && !body.datumAfhaling) {
+    if (!body.datumAfhaling) {
       return json({ error: "Datum van afhaling is verplicht." }, 400);
     }
     const now = new Date().toISOString();
@@ -94,12 +57,8 @@ export default async (req) => {
       type: body.type,
       patient: body.type === "patient" ? body.patient : null,
       bereidingNaam: body.type === "voorraad" ? body.bereidingNaam : null,
-      productnaam: body.type === "etiket" ? body.productnaam : null,
-      aantalEtiketten: body.type === "etiket" ? (Number(body.aantalEtiketten) || 1) : null,
-      lotnummer: body.type === "etiket" ? (body.lotnummer ?? "") : null,
-      vvd: body.type === "etiket" ? (body.vvd ?? "") : null,
       notitie: body.notitie ?? "",
-      datumAfhaling: body.type === "etiket" ? null : body.datumAfhaling,
+      datumAfhaling: body.datumAfhaling,
       klaar: false,
       klaarOp: null,
       aangemaakt: now,
@@ -127,10 +86,6 @@ export default async (req) => {
       ...existing,
       patient: body.patient ?? existing.patient,
       bereidingNaam: body.bereidingNaam ?? existing.bereidingNaam,
-      productnaam: body.productnaam ?? existing.productnaam,
-      aantalEtiketten: body.aantalEtiketten !== undefined ? Number(body.aantalEtiketten) : existing.aantalEtiketten,
-      lotnummer: body.lotnummer ?? existing.lotnummer,
-      vvd: body.vvd ?? existing.vvd,
       notitie: body.notitie ?? existing.notitie,
       datumAfhaling: body.datumAfhaling ?? existing.datumAfhaling,
       klaar: body.klaar ?? existing.klaar,
@@ -157,10 +112,7 @@ export default async (req) => {
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: {
-      "Content-Type": "application/json",
-      "Cache-Control": "no-store, no-cache, must-revalidate",
-    },
+    headers: { "Content-Type": "application/json" },
   });
 }
 
