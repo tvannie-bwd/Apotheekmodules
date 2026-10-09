@@ -1,0 +1,1529 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Magistraal</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 760px;
+      margin: 40px auto;
+      padding: 0 16px;
+      color: #1a1a1a;
+    }
+    h1 { font-size: 1.4rem; margin-bottom: 4px; }
+    h2 { font-size: 1.05rem; margin: 24px 0 8px; color: #333; }
+    p.subtitle { color: #666; margin-top: 0; }
+
+    .formulier {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+      display: grid;
+      gap: 8px;
+    }
+    .formulier .row {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr 0.9fr 0.9fr;
+      gap: 8px;
+    }
+    label { font-size: 0.85rem; color: #555; margin-bottom: 2px; display: block; }
+    input, textarea, select {
+      width: 100%;
+      font-family: inherit;
+      font-size: 1rem;
+      padding: 8px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: white;
+    }
+    textarea { min-height: 60px; resize: vertical; }
+
+    button {
+      padding: 8px 16px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #f5f5f5;
+    }
+    button.primary { background: #2b6cb0; color: white; border-color: #2b6cb0; }
+    button.danger { background: #fff; color: #c53030; border-color: #c53030; }
+
+    .tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid #ddd; }
+    .tab {
+      padding: 8px 16px;
+      cursor: pointer;
+      border: none;
+      background: none;
+      border-bottom: 2px solid transparent;
+      font-size: 1rem;
+      color: #555;
+    }
+    .tab.active { border-bottom-color: #2b6cb0; color: #2b6cb0; font-weight: 600; }
+
+    .bereiding {
+      border: 1px solid #e2e2e2;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .bereiding input[type="checkbox"] {
+      width: auto;
+      margin-top: 3px;
+      transform: scale(1.15);
+      cursor: pointer;
+    }
+    .bereiding-body { flex: 1; }
+    .bereiding-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .item-naam { font-weight: 600; font-size: 0.95rem; }
+    .dag-afkorting {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #2b6cb0;
+      text-transform: uppercase;
+    }
+    .dag-voluit {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #2b6cb0;
+      width: 80px;
+      text-align: left;
+      display: inline-block;
+    }
+    .afhaal-datum { font-size: 0.82rem; color: #2b6cb0; font-weight: 600; }
+    .notitie { color: #444; margin: 4px 0 0; white-space: pre-wrap; font-size: 0.9rem; }
+    .meta { font-size: 0.74rem; color: #999; margin-top: 4px; }
+    .bereiding-actions { margin-top: 6px; }
+
+    .overdue { border-color: #e53e3e; }
+    .overdue .afhaal-datum { color: #e53e3e; }
+    .boek-titel { justify-content: flex-start; gap: 8px; }
+    .boek-titel .toggle-icoon { color: #999; font-size: 0.8rem; }
+    .boek-detail { margin-top: 8px; }
+
+    #status { font-size: 0.9rem; color: #555; margin-bottom: 16px; min-height: 1.2em; }
+    .empty { color: #888; font-style: italic; }
+    footer.maker-balk {
+      margin-top: 32px;
+      padding: 10px 0;
+      border-top: 1px solid #e2e2e2;
+      text-align: center;
+      font-size: 0.78rem;
+      color: #999;
+    }
+
+    .pin-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid #2b6cb0;
+      background: transparent;
+      transition: background 0.15s;
+    }
+    .pin-dot.gevuld { background: #2b6cb0; }
+    .pin-toets {
+      font-size: 1.3rem;
+      padding: 14px 0;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: #f5f5f5;
+      cursor: pointer;
+    }
+    .pin-toets:active { background: #e2e2e2; }
+
+    .print-btn { font-size: 0.85rem; margin-left: 8px; }
+    .clear-banner {
+      background: #eaf3ff;
+      border: 1px solid #90b8e0;
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-bottom: 10px;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .clear-banner button { font-size: 0.85rem; padding: 4px 10px; }
+
+    @media print {
+      .tabs, .formulier, #status, .print-btn, .clear-banner, footer.maker-balk { display: none !important; }
+      .heading-openstaand, #patient-openstaand-list, #patient-openstaand-empty,
+      #voorraad-openstaand-list, #voorraad-openstaand-empty { display: none !important; }
+      input[type="checkbox"], .bereiding-actions { display: none !important; }
+      .boek-detail { display: block !important; }
+      .toggle-icoon { display: none !important; }
+      .bereiding { break-inside: avoid; border-color: #999; }
+      p.subtitle, p.testnote { display: none !important; }
+    }
+
+    /* ---------- Voorraadplaatsen (4e tabblad) ---------- */
+    .vp-toolbar {
+      display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+      margin-bottom: 12px;
+    }
+    .vp-toolbar input[type="text"], .vp-toolbar select {
+      padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;
+    }
+    .vp-toolbar input[type="text"] { flex: 1; min-width: 180px; }
+    .vp-status { font-size: 0.82rem; color: #666; width: 100%; }
+    .vp-status.ok { color: #2f855a; }
+    .vp-status.err { color: #c53030; }
+    #vp-file-input, #vp-grondstoffen-file-input { display: none; }
+    .vp-print-only { display: none; }
+
+    table.vp-table {
+      width: 100%; border-collapse: collapse; font-size: 0.87rem; margin-bottom: 16px;
+    }
+    table.vp-table th {
+      background: #2b6cb0; color: white; text-align: left; padding: 6px 8px;
+      font-size: 0.78rem; cursor: pointer; user-select: none; white-space: nowrap;
+    }
+    table.vp-table td {
+      padding: 6px 8px; border-top: 1px solid #e2e2e2; vertical-align: top;
+    }
+    table.vp-table tbody tr:not(.vp-no-click):hover { background: #f7fafc; cursor: pointer; }
+    .vp-badge {
+      display: inline-block; padding: 1px 7px; border-radius: 20px; font-size: 0.72rem; font-weight: 600;
+    }
+    .vp-badge.loc { background: #fdf0d5; color: #9c6500; }
+    .vp-badge.stock { background: #e4f7e9; color: #1e7a3b; }
+    .vp-badge.geen-stock { background: #eee; color: #888; }
+    .vp-badge.geldig { background: #e4f7e9; color: #1e7a3b; }
+    .vp-badge.vervallen { background: #fce8e9; color: #c53030; }
+
+    #vp-move-overlay, #vp-add-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35);
+      align-items: center; justify-content: center; z-index: 200;
+    }
+    #vp-move-overlay.open, #vp-add-overlay.open { display: flex; }
+    .vp-modal {
+      background: white; border-radius: 8px; padding: 20px; width: 340px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+    }
+    .vp-modal h3 { margin: 0 0 4px; font-size: 1rem; }
+    .vp-modal .vp-sub { font-size: 0.8rem; color: #666; margin-bottom: 12px; }
+    .vp-modal label { font-size: 0.82rem; color: #555; margin: 8px 0 3px; display: block; }
+    .vp-modal select, .vp-modal input {
+      width: 100%; padding: 7px 8px; font-size: 0.9rem; border: 1px solid #ccc; border-radius: 4px;
+    }
+    .vp-modal .vp-actions { display: flex; gap: 8px; margin-top: 16px; }
+    .vp-modal .vp-actions button { flex: 1; }
+    .vp-modal .vp-error { color: #c53030; font-size: 0.8rem; min-height: 1.2em; margin-top: 6px; }
+
+    @media print {
+      .vp-toolbar, .vp-status, #vp-move-overlay, #vp-add-overlay { display: none !important; }
+      .vp-no-click { display: none !important; }
+      .vp-print-only { display: block !important; margin-top: 0; }
+      table.vp-table tbody tr { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div id="login-overlay" style="position:fixed; inset:0; background:rgba(255,255,255,0.97); display:flex; align-items:center; justify-content:center; z-index:1000;">
+    <div style="max-width:340px; width:100%; padding:24px; border:1px solid #ddd; border-radius:8px; text-align:center;">
+      <h2 style="margin-top:0;">Aanmelden</h2>
+
+      <div style="display:flex; gap:4px; margin-bottom:12px; border-bottom:1px solid #ddd;">
+        <button class="login-tab active" data-mode="login" style="flex:1; padding:8px; border:none; background:none; border-bottom:2px solid #2b6cb0; color:#2b6cb0; font-weight:600; cursor:pointer;">Inloggen</button>
+        <button class="login-tab" data-mode="register" style="flex:1; padding:8px; border:none; background:none; border-bottom:2px solid transparent; color:#555; cursor:pointer;">Nieuwe apotheek</button>
+      </div>
+
+      <div style="text-align:left; margin-bottom:8px;">
+        <label for="login-apotheeknaam">Naam van je apotheek</label>
+        <input id="login-apotheeknaam" type="text" placeholder="bv. Apotheek Peeters" />
+      </div>
+
+      <div id="veld-uitnodigingscode" style="text-align:left; margin-bottom:8px; display:none;">
+        <label for="register-uitnodigingscode">Uitnodigingscode</label>
+        <input id="register-uitnodigingscode" type="text" placeholder="Code die je van mij kreeg" />
+      </div>
+
+      <p style="font-size:0.9rem; color:#666; margin-bottom:4px;">Code</p>
+      <div id="pin-dots" style="display:flex; justify-content:center; gap:12px; margin-bottom:16px;"></div>
+      <div id="pin-keypad" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:8px;"></div>
+      <p id="login-fout" style="color:#c53030; font-size:0.85rem; min-height:1.2em; margin-bottom:0;"></p>
+    </div>
+  </div>
+
+  <h1>Magistraal</h1>
+  <p class="subtitle" id="aangemeld-als" style="display:none;"></p>
+  <p class="subtitle"><a href="/bestellingen.html" style="font-size:0.85rem; color:#2b6cb0;">→ Naar Speciale bestellingen</a> · <a href="/contact-arts.html" style="font-size:0.85rem; color:#2b6cb0;">Contact arts</a> · <a href="/mutualiteiten.html" style="font-size:0.85rem; color:#2b6cb0;">Mutualiteiten</a> · <a href="/huisbereidingen.html" style="font-size:0.85rem; color:#2b6cb0;">Huisbereidingen</a> · <a href="/titularis.html" style="font-size:0.85rem; color:#2b6cb0;">Titularis</a> · <a href="/bandagisterie.html" style="font-size:0.85rem; color:#2b6cb0;">Bandagisterie →</a></p>
+  <p class="subtitle">Bereidingen registreren en opvolgen tot afhaling</p>
+
+  <div id="status"></div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="patient">Nieuwe bereiding</button>
+    <button class="tab" data-tab="voorraad">Nieuwe voorraadbereiding</button>
+    <button class="tab" data-tab="etiket">Etiketten</button>
+    <button class="tab" data-tab="voorraadplaatsen">Voorraadplaatsen</button>
+  </div>
+
+  <!-- Tabblad 1: patiëntgebonden bereiding -->
+  <div id="tab-patient">
+    <div class="formulier">
+      <div class="row">
+        <div>
+          <label for="patient-naam">Naam patiënt</label>
+          <input id="patient-naam" type="text" placeholder="Naam patiënt" />
+        </div>
+        <div>
+          <label style="visibility:hidden;">Dag</label>
+          <div id="patient-datum-dag" style="font-size:1.1rem; color:#2b6cb0; font-weight:700; padding:8px 0; text-align:right;"></div>
+        </div>
+        <div>
+          <label for="patient-datum">Datum van afhaling</label>
+          <input id="patient-datum" type="date" />
+        </div>
+        <div>
+          <label for="patient-uur">Uur van afhaling</label>
+          <div style="display:flex; gap:4px;">
+            <select id="patient-uur" style="flex:1;"></select>
+            <select id="patient-minuut" style="flex:1;">
+              <option value="00">00</option>
+              <option value="30">30</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div>
+        <label for="patient-notitie">Notitie (optioneel)</label>
+        <textarea id="patient-notitie" placeholder="Bijkomende info over de bereiding..."></textarea>
+      </div>
+      <button class="primary" id="patient-add-btn">Bereiding toevoegen</button>
+    </div>
+
+    <h2 class="heading-openstaand">Openstaand</h2>
+    <div id="patient-openstaand-list"></div>
+    <p class="empty" id="patient-openstaand-empty" style="display:none;">Geen openstaande bereidingen.</p>
+
+    <h2>Bereidingenboek <button class="print-btn" onclick="afdrukken('patient')">Afdrukken</button></h2>
+    <div id="patient-clear-banner" class="clear-banner" style="display:none;">
+      Bereidingenboek afgedrukt. Nu leegmaken?
+      <button class="primary" onclick="leegBereidingenboek('patient')">Ja, leegmaken</button>
+      <button onclick="verbergLeegBanner('patient')">Nee, laten staan</button>
+    </div>
+    <div id="patient-geschiedenis-list"></div>
+    <p class="empty" id="patient-geschiedenis-empty" style="display:none;">Nog geen bereidingen afgewerkt.</p>
+  </div>
+
+  <!-- Tabblad 2: voorraadbereiding -->
+  <div id="tab-voorraad" style="display:none;">
+    <div class="formulier">
+      <div>
+        <label for="voorraad-naam">Welke bereiding is leeg</label>
+        <input id="voorraad-naam" type="text" placeholder="Naam van de bereiding" />
+      </div>
+      <div>
+        <label for="voorraad-notitie">Notitie (optioneel)</label>
+        <textarea id="voorraad-notitie" placeholder="Bijkomende info over de bereiding..."></textarea>
+      </div>
+      <button class="primary" id="voorraad-add-btn">Voorraadbereiding toevoegen</button>
+    </div>
+
+    <h2 class="heading-openstaand">Openstaand</h2>
+    <div id="voorraad-openstaand-list"></div>
+    <p class="empty" id="voorraad-openstaand-empty" style="display:none;">Geen openstaande voorraadbereidingen.</p>
+
+    <h2>Bereidingenboek <button class="print-btn" onclick="afdrukken('voorraad')">Afdrukken</button></h2>
+    <div id="voorraad-clear-banner" class="clear-banner" style="display:none;">
+      Bereidingenboek afgedrukt. Nu leegmaken?
+      <button class="primary" onclick="leegBereidingenboek('voorraad')">Ja, leegmaken</button>
+      <button onclick="verbergLeegBanner('voorraad')">Nee, laten staan</button>
+    </div>
+    <div id="voorraad-geschiedenis-list"></div>
+    <p class="empty" id="voorraad-geschiedenis-empty" style="display:none;">Nog geen voorraadbereidingen afgewerkt.</p>
+  </div>
+
+  <!-- Tabblad 3: etiketten -->
+  <div id="tab-etiket" style="display:none;">
+    <div class="formulier">
+      <div class="row">
+        <div>
+          <label for="etiket-productnaam">Naam product</label>
+          <input id="etiket-productnaam" type="text" placeholder="Naam van het product" list="etiket-productnaam-suggesties" />
+          <datalist id="etiket-productnaam-suggesties"></datalist>
+        </div>
+        <div>
+          <label for="etiket-aantal">Aantal etiketten</label>
+          <input id="etiket-aantal" type="number" min="1" value="1" />
+        </div>
+        <div>
+          <label for="etiket-lotnummer">Lotnummer</label>
+          <input id="etiket-lotnummer" type="text" placeholder="Lotnummer" />
+        </div>
+        <div>
+          <label for="etiket-vvd">VVD</label>
+          <input id="etiket-vvd" type="date" />
+        </div>
+      </div>
+      <div>
+        <label for="etiket-notitie">Notitie (optioneel)</label>
+        <textarea id="etiket-notitie" placeholder="Bijkomende info..."></textarea>
+      </div>
+      <button class="primary" id="etiket-add-btn">Etiket toevoegen</button>
+    </div>
+
+    <h2 class="heading-openstaand">Openstaand (nog niet geprint)</h2>
+    <div id="etiket-openstaand-list"></div>
+    <p class="empty" id="etiket-openstaand-empty" style="display:none;">Geen openstaande etiketten.</p>
+
+    <h2>Etikettenboek (geprint) <button class="print-btn" onclick="afdrukken('etiket')">Afdrukken</button></h2>
+    <div id="etiket-clear-banner" class="clear-banner" style="display:none;">
+      Etikettenboek afgedrukt. Nu leegmaken?
+      <button class="primary" onclick="leegBereidingenboek('etiket')">Ja, leegmaken</button>
+      <button onclick="verbergLeegBanner('etiket')">Nee, laten staan</button>
+    </div>
+    <div id="etiket-geschiedenis-list"></div>
+    <p class="empty" id="etiket-geschiedenis-empty" style="display:none;">Nog geen etiketten geprint.</p>
+  </div>
+
+  <!-- Tabblad 4: voorraadplaatsen -->
+  <div id="tab-voorraadplaatsen" style="display:none;">
+    <div class="vp-toolbar">
+      <input type="text" id="vp-search" placeholder="Zoek op omschrijving, CNK, voorraadplaats...">
+      <select id="vp-filter-loc"><option value="">Voorraadplaats: alle</option></select>
+      <select id="vp-filter-stock">
+        <option value="">Stock: alle</option>
+        <option value="met">Met stock</option>
+        <option value="zonder">Zonder stock</option>
+      </select>
+      <button id="vp-upload-trigger">CSV-bestand uploaden</button>
+      <input type="file" id="vp-file-input" accept=".csv,text/csv">
+      <button id="vp-grondstoffen-trigger">Grondstoffenregister uploaden</button>
+      <input type="file" id="vp-grondstoffen-file-input" accept=".csv,text/csv">
+      <button class="primary" id="vp-add-trigger">Product toevoegen</button>
+      <button id="vp-print-trigger">🖨️ Afdrukken</button>
+      <div class="vp-status" id="vp-upload-status"></div>
+      <div class="vp-status" id="vp-grondstoffen-status"></div>
+    </div>
+
+    <p class="empty" id="vp-loading">Bezig met laden...</p>
+    <p class="empty" id="vp-empty" style="display:none;">Geen resultaten gevonden.</p>
+
+    <h3 id="vp-print-titel" class="vp-print-only"></h3>
+    <table class="vp-table" id="vp-table" style="display:none;">
+      <thead>
+        <tr>
+          <th data-key="voorraadplaats">Voorraadplaats</th>
+          <th>CNK</th>
+          <th>Omschrijving</th>
+          <th data-key="stockNum">Stock</th>
+          <th data-key="vervaldatum">Vervaldatum</th>
+          <th class="vp-no-click">Actie</th>
+        </tr>
+      </thead>
+      <tbody id="vp-table-body"></tbody>
+    </table>
+  </div>
+
+  <div id="vp-add-overlay">
+    <div class="vp-modal">
+      <h3>Product toevoegen</h3>
+      <label for="vp-add-loc">Voorraadplaats</label>
+      <input type="text" id="vp-add-loc" list="vp-loc-options" placeholder="bv. VRAC 3.1">
+      <datalist id="vp-loc-options"></datalist>
+      <label for="vp-add-cnk">CNK</label>
+      <input type="text" id="vp-add-cnk" placeholder="bv. 0914176">
+      <label for="vp-add-omschrijving">Omschrijving</label>
+      <input type="text" id="vp-add-omschrijving" placeholder="Productnaam">
+      <label for="vp-add-stock">Stock</label>
+      <input type="text" id="vp-add-stock" placeholder="bv. 5 (optioneel)">
+      <div class="vp-error" id="vp-add-error"></div>
+      <div class="vp-actions">
+        <button id="vp-add-cancel">Annuleren</button>
+        <button class="primary" id="vp-add-submit">Toevoegen</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="vp-move-overlay">
+    <div class="vp-modal">
+      <h3>Voorraadplaats wijzigen</h3>
+      <div class="vp-sub" id="vp-move-sub"></div>
+      <label for="vp-move-select">Nieuwe voorraadplaats</label>
+      <select id="vp-move-select"><option value="__new__">+ Nieuwe voorraadplaats...</option></select>
+      <input type="text" id="vp-move-input" placeholder="Naam nieuwe voorraadplaats" style="display:none; margin-top:8px;">
+      <div class="vp-error" id="vp-move-error"></div>
+      <div class="vp-actions">
+        <button id="vp-move-cancel">Annuleren</button>
+        <button class="primary" id="vp-move-submit">Opslaan</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = "/api/magistraal";
+    const status = document.getElementById("status");
+    let sessieToken = localStorage.getItem("magistraal-token");
+
+    function setStatus(msg) {
+      status.textContent = msg;
+    }
+
+    const PIN_LENGTE = 4;
+    let ingevoerdeCode = "";
+    let loginModus = "login";
+
+    function toonLoginOverlay(tonen) {
+      document.getElementById("login-overlay").style.display = tonen ? "flex" : "none";
+    }
+
+    function toonAangemeldAls(apotheeknaam) {
+      const el = document.getElementById("aangemeld-als");
+      if (sessieToken) {
+        el.innerHTML = apotheeknaam
+          ? `Aangemeld als: <strong>${apotheeknaam}</strong> — <a href="#" id="uitloggen-link">uitloggen</a>`
+          : `Aangemeld — <a href="#" id="uitloggen-link">uitloggen</a>`;
+        el.style.display = "block";
+        document.getElementById("uitloggen-link").addEventListener("click", (e) => {
+          e.preventDefault();
+          uitloggen();
+        });
+      } else {
+        el.style.display = "none";
+      }
+    }
+
+    function uitloggen() {
+      localStorage.removeItem("magistraal-token");
+      localStorage.removeItem("magistraal-apotheeknaam");
+      sessieToken = null;
+      toonAangemeldAls(null);
+      toonLoginOverlay(true);
+    }
+
+    document.querySelectorAll(".login-tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".login-tab").forEach((t) => {
+          t.classList.remove("active");
+          t.style.borderBottomColor = "transparent";
+          t.style.color = "#555";
+          t.style.fontWeight = "normal";
+        });
+        tab.classList.add("active");
+        tab.style.borderBottomColor = "#2b6cb0";
+        tab.style.color = "#2b6cb0";
+        tab.style.fontWeight = "600";
+        loginModus = tab.dataset.mode;
+        document.getElementById("veld-uitnodigingscode").style.display = loginModus === "register" ? "block" : "none";
+        document.getElementById("login-fout").textContent = "";
+      });
+    });
+
+    function tekenPinDots() {
+      const container = document.getElementById("pin-dots");
+      container.innerHTML = "";
+      for (let i = 0; i < PIN_LENGTE; i++) {
+        const dot = document.createElement("div");
+        dot.className = "pin-dot" + (i < ingevoerdeCode.length ? " gevuld" : "");
+        container.appendChild(dot);
+      }
+    }
+
+    function tekenPinKeypad() {
+      const container = document.getElementById("pin-keypad");
+      container.innerHTML = "";
+      const toetsen = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "wis", "0", "⌫"];
+      for (const t of toetsen) {
+        const btn = document.createElement("button");
+        btn.className = "pin-toets";
+        btn.textContent = t === "wis" ? "Wis" : t;
+        btn.addEventListener("click", () => {
+          if (t === "⌫") {
+            ingevoerdeCode = ingevoerdeCode.slice(0, -1);
+          } else if (t === "wis") {
+            ingevoerdeCode = "";
+          } else if (ingevoerdeCode.length < PIN_LENGTE) {
+            ingevoerdeCode += t;
+          }
+          tekenPinDots();
+          document.getElementById("login-fout").textContent = "";
+          if (ingevoerdeCode.length === PIN_LENGTE) probeerInloggen();
+        });
+        container.appendChild(btn);
+      }
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (document.getElementById("login-overlay").style.display === "none") return;
+      if (document.activeElement && document.activeElement.tagName === "INPUT") return; // niet storen tijdens tekstinvoer
+      if (e.key >= "0" && e.key <= "9" && ingevoerdeCode.length < PIN_LENGTE) {
+        ingevoerdeCode += e.key;
+        tekenPinDots();
+        if (ingevoerdeCode.length === PIN_LENGTE) probeerInloggen();
+      } else if (e.key === "Backspace") {
+        ingevoerdeCode = ingevoerdeCode.slice(0, -1);
+        tekenPinDots();
+      }
+    });
+
+    async function probeerInloggen() {
+      const foutVeld = document.getElementById("login-fout");
+      foutVeld.textContent = "";
+      const apotheeknaam = document.getElementById("login-apotheeknaam").value.trim();
+      if (!apotheeknaam) {
+        foutVeld.textContent = "Naam van de apotheek is verplicht.";
+        return;
+      }
+      const eindpunt = loginModus === "register" ? "/api/register" : "/api/login";
+      const body = loginModus === "register"
+        ? { uitnodigingscode: document.getElementById("register-uitnodigingscode").value.trim(), apotheeknaam, code: ingevoerdeCode }
+        : { apotheeknaam, code: ingevoerdeCode };
+      try {
+        const res = await fetch(eindpunt, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          foutVeld.textContent = data.error || "Aanmelden mislukt.";
+          ingevoerdeCode = "";
+          tekenPinDots();
+          return;
+        }
+        sessieToken = data.token;
+        localStorage.setItem("magistraal-token", sessieToken);
+        localStorage.setItem("magistraal-apotheeknaam", data.apotheeknaam || apotheeknaam);
+        toonAangemeldAls(data.apotheeknaam || apotheeknaam);
+        toonLoginOverlay(false);
+        loadBereidingen();
+      } catch (err) {
+        foutVeld.textContent = "Fout bij aanmelden: " + err.message;
+        ingevoerdeCode = "";
+        tekenPinDots();
+      }
+    }
+
+    tekenPinKeypad();
+    tekenPinDots();
+    if (sessieToken) toonAangemeldAls(localStorage.getItem("magistraal-apotheeknaam"));
+
+    async function apiFetch(url, options = {}) {
+      const headers = { ...(options.headers || {}), Authorization: `Bearer ${sessieToken}` };
+      const res = await fetch(url, { ...options, headers, cache: "no-store" });
+      if (res.status === 401) {
+        localStorage.removeItem("magistraal-token");
+        localStorage.removeItem("magistraal-apotheeknaam");
+        sessieToken = null;
+        toonAangemeldAls(null);
+        toonLoginOverlay(true);
+        throw new Error("Sessie verlopen, gelieve opnieuw aan te melden.");
+      }
+      return res;
+    }
+
+    if (sessieToken) {
+      toonLoginOverlay(false);
+    } else {
+      toonLoginOverlay(true);
+    }
+
+    const WEEKDAGEN = ["zo", "ma", "di", "wo", "do", "vr", "za"];
+    const WEEKDAGEN_VOLUIT = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
+
+    function formatDatum(isoDateTime) {
+      if (!isoDateTime) return "";
+      const [datumDeel, uurDeel] = isoDateTime.split("T");
+      const [y, m, d] = datumDeel.split("-");
+      const uur = uurDeel ? uurDeel.slice(0, 5) : "";
+      return `${d}/${m}/${y}` + (uur ? ` om ${uur}` : "");
+    }
+
+    function dagAfkorting(isoDateTime) {
+      if (!isoDateTime) return "";
+      return WEEKDAGEN[new Date(isoDateTime).getDay()];
+    }
+
+    function dagVoluit(isoDateTime) {
+      if (!isoDateTime) return "";
+      return WEEKDAGEN_VOLUIT[new Date(isoDateTime).getDay()];
+    }
+
+    function formatDatumTijd(iso) {
+      if (!iso) return "";
+      return new Date(iso).toLocaleString("nl-BE", {
+        day: "2-digit", month: "2-digit", year: "numeric",
+        hour: "2-digit", minute: "2-digit",
+      });
+    }
+
+    function isVerlopen(isoDateTime) {
+      if (!isoDateTime) return false;
+      return new Date(isoDateTime) < new Date();
+    }
+
+    let herbevestigBezig = false;
+
+    async function herbevestigOnbevestigd() {
+      if (herbevestigBezig) return; // al een controle-lus bezig
+      herbevestigBezig = true;
+      const tussenpozen = [2000, 3000, 4000, 5000, 6000]; // oplopend, max ~20s totaal
+      for (const wachttijd of tussenpozen) {
+        if (onbevestigd.length === 0) break;
+        await new Promise((r) => setTimeout(r, wachttijd));
+        if (onbevestigd.length === 0) break;
+        await loadBereidingen(true);
+      }
+      herbevestigBezig = false;
+    }
+
+    let huidigeData = {
+      patientOpenstaand: [], patientGeschiedenis: [],
+      voorraadOpenstaand: [], voorraadGeschiedenis: [],
+      etiketOpenstaand: [], etiketGeschiedenis: [],
+    };
+    let onbevestigd = []; // items die lokaal al getoond worden, maar nog niet bevestigd zijn door de server
+
+    function renderAlles() {
+      renderLijst("patient-openstaand-list", "patient-openstaand-empty", huidigeData.patientOpenstaand, { toonActies: true, aangemaakt: true, labelPrefix: "Afhaling: ", toonVerlopen: true });
+      renderLijst("patient-geschiedenis-list", "patient-geschiedenis-empty", huidigeData.patientGeschiedenis, { toonActies: false, aangemaakt: false, labelPrefix: "Afhaling: ", toonVerlopen: false });
+      renderLijst("voorraad-openstaand-list", "voorraad-openstaand-empty", huidigeData.voorraadOpenstaand, { toonActies: true, aangemaakt: false, labelPrefix: "Geregistreerd: ", toonVerlopen: false });
+      renderLijst("voorraad-geschiedenis-list", "voorraad-geschiedenis-empty", huidigeData.voorraadGeschiedenis, { toonActies: false, aangemaakt: false, labelPrefix: "Geregistreerd: ", toonVerlopen: false });
+      renderEtikettenLijst("etiket-openstaand-list", "etiket-openstaand-empty", huidigeData.etiketOpenstaand, true);
+      renderEtikettenLijst("etiket-geschiedenis-list", "etiket-geschiedenis-empty", huidigeData.etiketGeschiedenis, false);
+    }
+
+    async function loadBereidingen(stil = false) {
+      if (!stil) setStatus("Bezig met laden...");
+      try {
+        const res = await apiFetch(`${API}?_=${Date.now()}`);
+        if (!res.ok) throw new Error(await res.text());
+        const vers = await res.json();
+
+        // Onbevestigde items (net lokaal toegevoegd) die de server nog niet
+        // meegeeft, blijven behouden i.p.v. te verdwijnen — pas zodra de
+        // server ze zelf teruggeeft, worden ze als "bevestigd" beschouwd.
+        onbevestigd = onbevestigd.filter((o) => {
+          const aanwezig = vers[o.lijstNaam].some((x) => x.id === o.item.id);
+          if (!aanwezig) {
+            vers[o.lijstNaam] = [...vers[o.lijstNaam], o.item]
+              .sort((a, b) => (a.datumAfhaling ?? "").localeCompare(b.datumAfhaling ?? ""));
+          }
+          return !aanwezig; // enkel nog-niet-bevestigde items bijhouden
+        });
+
+        huidigeData = vers;
+        renderAlles();
+        vulEtiketSuggesties();
+        setStatus("Bijgewerkt om " + new Date().toLocaleTimeString());
+      } catch (err) {
+        setStatus("Fout bij laden: " + err.message);
+      }
+    }
+
+    function itemNaam(b) {
+      return b.type === "patient" ? b.patient : b.bereidingNaam;
+    }
+
+    function renderLijst(containerId, emptyId, lijst, opties) {
+      const container = document.getElementById(containerId);
+      const empty = document.getElementById(emptyId);
+      container.innerHTML = "";
+      empty.style.display = lijst.length === 0 ? "block" : "none";
+      for (const b of lijst) {
+        const el = opties.toonActies ? maakOpenstaandKaart(b, opties) : maakBoekKaart(b, opties);
+        container.appendChild(el);
+      }
+    }
+
+    function maakOpenstaandKaart(b, opties) {
+      const el = document.createElement("div");
+      el.dataset.id = b.id;
+      const magVerlopen = opties.toonVerlopen && isVerlopen(b.datumAfhaling);
+      el.className = "bereiding" + (magVerlopen ? " overdue" : "");
+      el.innerHTML = `
+        <input type="checkbox" title="Markeer als klaar" />
+        <div class="bereiding-body">
+          <div class="bereiding-header">
+            <span class="item-naam"></span>
+            <span class="dag-voluit"></span>
+            <span class="afhaal-datum"></span>
+          </div>
+          <div class="notitie"></div>
+          <div class="meta"></div>
+          <div class="bereiding-actions"><button class="danger delete-btn">Verwijderen</button></div>
+        </div>
+      `;
+      el.querySelector(".item-naam").textContent = itemNaam(b);
+      el.querySelector(".dag-voluit").textContent = dagVoluit(b.datumAfhaling);
+      el.querySelector(".afhaal-datum").textContent = opties.labelPrefix + formatDatum(b.datumAfhaling);
+      el.querySelector(".notitie").textContent = b.notitie || "";
+      el.querySelector(".meta").textContent = "Aangemaakt: " + formatDatumTijd(b.aangemaakt);
+      el.querySelector('input[type="checkbox"]').addEventListener("change", () => markeerKlaar(b.id));
+      koppelVerwijderKnop(el.querySelector(".delete-btn"), b.id);
+      return el;
+    }
+
+    function maakBoekKaart(b, opties) {
+      const el = document.createElement("div");
+      el.dataset.id = b.id;
+      el.className = "bereiding";
+      el.innerHTML = `
+        <div class="bereiding-body">
+          <div class="bereiding-header boek-titel" style="cursor:pointer;">
+            <span class="item-naam"></span>
+            <span class="toggle-icoon">▸</span>
+          </div>
+          <div class="boek-detail" style="display:none;">
+            <div class="bereiding-header">
+              <span class="dag-afkorting"></span>
+              <span class="afhaal-datum"></span>
+            </div>
+            <div class="notitie"></div>
+            <div class="meta"></div>
+            <div class="bereiding-actions">
+              <label><input type="checkbox" checked /> Terugzetten naar openstaand</label>
+            </div>
+          </div>
+        </div>
+      `;
+      el.querySelector(".item-naam").textContent = itemNaam(b);
+      el.querySelector(".dag-afkorting").textContent = dagAfkorting(b.datumAfhaling);
+      el.querySelector(".afhaal-datum").textContent = opties.labelPrefix + formatDatum(b.datumAfhaling);
+      el.querySelector(".notitie").textContent = b.notitie || "";
+      el.querySelector(".meta").textContent = "Klaar gemeld: " + formatDatumTijd(b.klaarOp);
+      el.querySelector('input[type="checkbox"]').addEventListener("change", () => heropenBereiding(b.id));
+
+      const titel = el.querySelector(".boek-titel");
+      const detail = el.querySelector(".boek-detail");
+      const icoon = el.querySelector(".toggle-icoon");
+      titel.addEventListener("click", () => {
+        const opengeklapt = detail.style.display !== "none";
+        detail.style.display = opengeklapt ? "none" : "block";
+        icoon.textContent = opengeklapt ? "▸" : "▾";
+      });
+      return el;
+    }
+
+    async function voegBereidingToe(type) {
+      const prefix = type;
+      const naamVeld = document.getElementById(`${prefix}-naam`).value.trim();
+      const notitie = document.getElementById(`${prefix}-notitie`).value.trim();
+      const naamLabel = type === "patient" ? "Naam patiënt" : "Naam van de bereiding";
+
+      let datumAfhaling;
+      if (type === "patient") {
+        const datumVeld = document.getElementById("patient-datum").value;
+        const uurVeld = document.getElementById("patient-uur").value;
+        const minuutVeld = document.getElementById("patient-minuut").value;
+        if (!naamVeld || !datumVeld) {
+          setStatus(`${naamLabel} en datum van afhaling zijn verplicht.`);
+          return;
+        }
+        datumAfhaling = `${datumVeld}T${uurVeld}:${minuutVeld}`;
+      } else {
+        if (!naamVeld) {
+          setStatus(`${naamLabel} is verplicht.`);
+          return;
+        }
+        datumAfhaling = new Date().toISOString(); // registratiemoment
+      }
+
+      const body = type === "patient"
+        ? { type, patient: naamVeld, notitie, datumAfhaling }
+        : { type, bereidingNaam: naamVeld, notitie, datumAfhaling };
+
+      setStatus("Bezig met opslaan...");
+      try {
+        const res = await apiFetch(API, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const nieuweBereiding = await res.json();
+
+        // Meteen lokaal tonen, niet wachten op een nieuwe lijst van de
+        // server (die kan door Netlify Blobs eventjes vertraagd zijn).
+        const lijstNaam = type === "patient" ? "patientOpenstaand" : "voorraadOpenstaand";
+        huidigeData[lijstNaam] = [...huidigeData[lijstNaam], nieuweBereiding]
+          .sort((a, b) => (a.datumAfhaling ?? "").localeCompare(b.datumAfhaling ?? ""));
+        onbevestigd.push({ item: nieuweBereiding, lijstNaam });
+        renderAlles();
+        setStatus(type === "patient" ? "Bereiding toegevoegd." : "Voorraadbereiding toegevoegd.");
+
+        document.getElementById(`${prefix}-naam`).value = "";
+        document.getElementById(`${prefix}-notitie`).value = "";
+        if (type === "patient") vulStandaardDatumTijdIn("patient");
+
+        // Herhaaldelijk stil controleren tot de server het item zelf ook
+        // teruggeeft — het item blijft intussen gewoon zichtbaar staan.
+        herbevestigOnbevestigd();
+      } catch (err) {
+        setStatus("Fout bij opslaan: " + err.message);
+      }
+    }
+
+    function vulEtiketSuggesties() {
+      const alleEtiketten = [...(huidigeData.etiketOpenstaand || []), ...(huidigeData.etiketGeschiedenis || [])];
+      const telling = new Map();
+      for (const e of alleEtiketten) {
+        if (!e.productnaam) continue;
+        telling.set(e.productnaam, (telling.get(e.productnaam) || 0) + 1);
+      }
+      const gesorteerd = [...telling.entries()].sort((a, b) => b[1] - a[1]).map(([naam]) => naam);
+      const datalist = document.getElementById("etiket-productnaam-suggesties");
+      datalist.innerHTML = "";
+      for (const naam of gesorteerd) {
+        const opt = document.createElement("option");
+        opt.value = naam;
+        datalist.appendChild(opt);
+      }
+    }
+
+    async function voegEtiketToe() {
+      const productnaam = document.getElementById("etiket-productnaam").value.trim();
+      const aantalEtiketten = document.getElementById("etiket-aantal").value;
+      const lotnummer = document.getElementById("etiket-lotnummer").value.trim();
+      const vvd = document.getElementById("etiket-vvd").value;
+      const notitie = document.getElementById("etiket-notitie").value.trim();
+
+      if (!productnaam) {
+        setStatus("Naam product is verplicht.");
+        return;
+      }
+      setStatus("Bezig met opslaan...");
+      try {
+        const res = await apiFetch(API, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "etiket", productnaam, aantalEtiketten, lotnummer, vvd, notitie }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const nieuwEtiket = await res.json();
+
+        huidigeData.etiketOpenstaand = [nieuwEtiket, ...huidigeData.etiketOpenstaand];
+        onbevestigd.push({ item: nieuwEtiket, lijstNaam: "etiketOpenstaand" });
+        renderAlles();
+        vulEtiketSuggesties();
+        setStatus("Etiket toegevoegd.");
+
+        document.getElementById("etiket-productnaam").value = "";
+        document.getElementById("etiket-aantal").value = "1";
+        document.getElementById("etiket-lotnummer").value = "";
+        document.getElementById("etiket-vvd").value = "";
+        document.getElementById("etiket-notitie").value = "";
+
+        herbevestigOnbevestigd();
+      } catch (err) {
+        setStatus("Fout bij opslaan: " + err.message);
+      }
+    }
+    document.getElementById("etiket-add-btn").addEventListener("click", voegEtiketToe);
+
+    function formatVvd(isoDatum) {
+      if (!isoDatum) return "";
+      const [y, m, d] = isoDatum.split("-");
+      return `${d}/${m}/${y}`;
+    }
+
+    function renderEtikettenLijst(containerId, emptyId, lijst, toonActies) {
+      const container = document.getElementById(containerId);
+      const empty = document.getElementById(emptyId);
+      container.innerHTML = "";
+      empty.style.display = lijst.length === 0 ? "block" : "none";
+      for (const b of lijst) {
+        const el = document.createElement("div");
+        el.className = "bereiding";
+        el.dataset.id = b.id;
+        const checkboxAttrs = toonActies ? "" : "checked";
+        el.innerHTML = `
+          <input type="checkbox" ${checkboxAttrs} title="${toonActies ? "Markeer als geprint" : "Terugzetten naar openstaand"}" />
+          <div class="bereiding-body">
+            <div class="bereiding-header">
+              <span class="item-naam"></span>
+              <span class="afhaal-datum"></span>
+            </div>
+            <div class="notitie"></div>
+            <div class="meta"></div>
+            ${toonActies ? '<div class="bereiding-actions"><button class="danger delete-btn">Verwijderen</button></div>' : ""}
+          </div>
+        `;
+        el.querySelector(".item-naam").textContent = b.productnaam;
+        el.querySelector(".afhaal-datum").textContent =
+          `${b.aantalEtiketten || 1}x` +
+          (b.lotnummer ? ` · Lot ${b.lotnummer}` : "") +
+          (b.vvd ? ` · VVD ${formatVvd(b.vvd)}` : "");
+        el.querySelector(".notitie").textContent = b.notitie || "";
+        el.querySelector(".meta").textContent = toonActies
+          ? "Geregistreerd: " + formatDatumTijd(b.aangemaakt)
+          : "Geprint: " + formatDatumTijd(b.klaarOp);
+
+        if (toonActies) {
+          el.querySelector('input[type="checkbox"]').addEventListener("change", () => markeerKlaar(b.id));
+          koppelVerwijderKnop(el.querySelector(".delete-btn"), b.id);
+        } else {
+          el.querySelector('input[type="checkbox"]').addEventListener("change", () => heropenBereiding(b.id));
+        }
+        container.appendChild(el);
+      }
+    }
+
+    async function markeerKlaar(id) {
+      setStatus("Bezig met bijwerken...");
+      try {
+        const res = await apiFetch(`${API}?id=${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ klaar: true }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        await loadBereidingen();
+      } catch (err) {
+        setStatus("Fout bij bijwerken: " + err.message);
+      }
+    }
+
+    async function heropenBereiding(id) {
+      setStatus("Bezig met bijwerken...");
+      try {
+        const res = await apiFetch(`${API}?id=${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ klaar: false }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        await loadBereidingen();
+      } catch (err) {
+        setStatus("Fout bij bijwerken: " + err.message);
+      }
+    }
+
+    async function verwijderBereiding(id) {
+      setStatus("Bezig met verwijderen...");
+      try {
+        const res = await apiFetch(`${API}?id=${id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error(await res.text());
+        await loadBereidingen();
+      } catch (err) {
+        setStatus("Fout bij verwijderen: " + err.message);
+      }
+    }
+
+    function koppelVerwijderKnop(button, id) {
+      let bevestigen = false;
+      let timeoutId;
+      button.addEventListener("click", () => {
+        if (!bevestigen) {
+          bevestigen = true;
+          button.textContent = "Zeker? Klik opnieuw";
+          timeoutId = setTimeout(() => {
+            bevestigen = false;
+            button.textContent = "Verwijderen";
+          }, 3000);
+        } else {
+          clearTimeout(timeoutId);
+          verwijderBereiding(id);
+        }
+      });
+    }
+
+    let laatsteAfdrukType = null;
+
+    function afdrukken(type) {
+      laatsteAfdrukType = type;
+      window.print();
+    }
+
+    window.addEventListener("afterprint", () => {
+      if (laatsteAfdrukType) {
+        document.getElementById(`${laatsteAfdrukType}-clear-banner`).style.display = "flex";
+        laatsteAfdrukType = null;
+      }
+    });
+
+    function verbergLeegBanner(type) {
+      document.getElementById(`${type}-clear-banner`).style.display = "none";
+    }
+
+    async function leegBereidingenboek(type) {
+      verbergLeegBanner(type);
+      const idsLijst = Array.from(
+        document.getElementById(`${type}-geschiedenis-list`).children
+      ).map((el) => el.dataset.id);
+      setStatus("Bezig met leegmaken van het bereidingenboek...");
+      try {
+        for (const id of idsLijst) {
+          const res = await apiFetch(`${API}?id=${id}`, { method: "DELETE" });
+          if (!res.ok) throw new Error(await res.text());
+        }
+        await loadBereidingen();
+        setStatus("Bereidingenboek geleegd.");
+      } catch (err) {
+        setStatus("Fout bij leegmaken: " + err.message);
+      }
+    }
+
+    document.getElementById("patient-add-btn").addEventListener("click", () => voegBereidingToe("patient"));
+    document.getElementById("voorraad-add-btn").addEventListener("click", () => voegBereidingToe("voorraad"));
+
+    document.querySelectorAll(".tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+        tab.classList.add("active");
+        document.getElementById("tab-patient").style.display = tab.dataset.tab === "patient" ? "block" : "none";
+        document.getElementById("tab-voorraad").style.display = tab.dataset.tab === "voorraad" ? "block" : "none";
+        document.getElementById("tab-etiket").style.display = tab.dataset.tab === "etiket" ? "block" : "none";
+        document.getElementById("tab-voorraadplaatsen").style.display = tab.dataset.tab === "voorraadplaatsen" ? "block" : "none";
+        if (tab.dataset.tab === "voorraadplaatsen" && !vpGeladen) {
+          vpGeladen = true;
+          laadVoorraadplaatsen();
+        }
+      });
+    });
+
+    function vulUrenlijstIn(prefix) {
+      const select = document.getElementById(`${prefix}-uur`);
+      select.innerHTML = "";
+      for (let h = 8; h <= 18; h++) {
+        const opt = document.createElement("option");
+        opt.value = String(h).padStart(2, "0");
+        opt.textContent = String(h).padStart(2, "0");
+        select.appendChild(opt);
+      }
+    }
+
+    function vulStandaardDatumTijdIn(prefix) {
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      let uur = Math.min(Math.max(now.getHours(), 8), 18);
+      let minuut = now.getMinutes() < 30 ? "00" : "30";
+      document.getElementById(`${prefix}-datum`).value =
+        `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+      document.getElementById(`${prefix}-uur`).value = pad(uur);
+      document.getElementById(`${prefix}-minuut`).value = minuut;
+      toonDagAfkorting(prefix);
+    }
+
+    function toonDagAfkorting(prefix) {
+      const datumVeld = document.getElementById(`${prefix}-datum`).value;
+      const label = document.getElementById(`${prefix}-datum-dag`);
+      if (!datumVeld) {
+        label.textContent = "";
+        return;
+      }
+      label.textContent = WEEKDAGEN_VOLUIT[new Date(datumVeld + "T00:00:00").getDay()];
+    }
+
+    document.getElementById("patient-datum").addEventListener("change", () => toonDagAfkorting("patient"));
+
+    vulUrenlijstIn("patient");
+    vulStandaardDatumTijdIn("patient");
+
+    loadBereidingen();
+
+    // ================= Voorraadplaatsen (4e tabblad) =================
+    // Hergebruikt de bestaande login/sessie (sessieToken, apiFetch, setStatus)
+    // van hierboven — geen aparte login nodig.
+    const API_VP = "/api/voorraadplaatsen";
+    let vpGeladen = false;
+    let vpRecords = [];
+    let vpSortKey = "voorraadplaats";
+    let vpSortDir = "asc";
+
+    function vpEscapeHtml(s) {
+      return String(s || "").replace(/[&<>"']/g, (c) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+      }[c]));
+    }
+    function vpTodayIso() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+    function vpFormatDate(iso) {
+      if (!iso) return "";
+      const [y, m, d] = iso.split("-");
+      return `${d}/${m}/${y}`;
+    }
+    function vpStockNum(r) {
+      const n = parseInt(r.stock, 10);
+      return Number.isNaN(n) ? null : n;
+    }
+    function vpKeyOf(r) {
+      return `${r.cnk}::${r.voorraadplaats}`;
+    }
+
+    async function laadVoorraadplaatsen() {
+      document.getElementById("vp-loading").style.display = "block";
+      document.getElementById("vp-table").style.display = "none";
+      document.getElementById("vp-empty").style.display = "none";
+      try {
+        const res = await apiFetch(`${API_VP}?_=${Date.now()}`);
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        vpRecords = data.overzicht || [];
+        vpVulLocFilter();
+        vpRenderTable();
+      } catch (err) {
+        document.getElementById("vp-loading").textContent = "Fout bij laden: " + err.message;
+      }
+    }
+
+    function vpVulLocFilter() {
+      const sel = document.getElementById("vp-filter-loc");
+      const huidige = sel.value;
+      const locs = Array.from(new Set(vpRecords.map((r) => r.voorraadplaats).filter(Boolean))).sort();
+      sel.innerHTML = '<option value="">Voorraadplaats: alle</option>' +
+        locs.map((l) => `<option value="${vpEscapeHtml(l)}">${vpEscapeHtml(l)}</option>`).join("");
+      if (locs.includes(huidige)) sel.value = huidige;
+    }
+
+    function vpGetFiltered() {
+      const q = document.getElementById("vp-search").value.trim().toLowerCase();
+      const locFilter = document.getElementById("vp-filter-loc").value;
+      const stockFilter = document.getElementById("vp-filter-stock").value;
+      return vpRecords.filter((r) => {
+        if (locFilter && r.voorraadplaats !== locFilter) return false;
+        const sn = vpStockNum(r);
+        if (stockFilter === "met" && !(sn && sn > 0)) return false;
+        if (stockFilter === "zonder" && sn) return false;
+        if (q) {
+          const hay = [r.cnk, r.omschrijving, r.voorraadplaats].join(" ").toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+    }
+
+    function vpSortRecords(records) {
+      const dir = vpSortDir === "asc" ? 1 : -1;
+      return records.slice().sort((a, b) => {
+        let va, vb;
+        if (vpSortKey === "stockNum") {
+          va = vpStockNum(a); vb = vpStockNum(b);
+          va = va === null ? -Infinity : va;
+          vb = vb === null ? -Infinity : vb;
+          return (va - vb) * dir;
+        }
+        va = (a[vpSortKey] || "").toString();
+        vb = (b[vpSortKey] || "").toString();
+        return va.localeCompare(vb) * dir;
+      });
+    }
+
+    function vpRenderTable() {
+      const filtered = vpSortRecords(vpGetFiltered());
+      document.getElementById("vp-loading").style.display = "none";
+      const table = document.getElementById("vp-table");
+      const empty = document.getElementById("vp-empty");
+      if (!filtered.length) {
+        table.style.display = "none";
+        empty.style.display = "block";
+        return;
+      }
+      empty.style.display = "none";
+      table.style.display = "table";
+
+      const tbody = document.getElementById("vp-table-body");
+      tbody.innerHTML = filtered.map((r) => {
+        const sn = vpStockNum(r);
+        const stockBadge = sn
+          ? `<span class="vp-badge stock">${sn}</span>`
+          : `<span class="vp-badge geen-stock">-</span>`;
+        let vervalBadge = "";
+        if (r.vervaldatum) {
+          const vervallen = r.vervaldatum < vpTodayIso();
+          vervalBadge = `<span class="vp-badge ${vervallen ? "vervallen" : "geldig"}">${vpFormatDate(r.vervaldatum)}</span>`;
+        }
+        return `
+          <tr data-cnk="${vpEscapeHtml(r.cnk)}" data-loc="${vpEscapeHtml(r.voorraadplaats)}" data-omschrijving="${vpEscapeHtml(r.omschrijving)}">
+            <td><span class="vp-badge loc">${vpEscapeHtml(r.voorraadplaats)}</span></td>
+            <td>${vpEscapeHtml(r.cnk)}</td>
+            <td>${vpEscapeHtml(r.omschrijving)}</td>
+            <td>${stockBadge}</td>
+            <td>${vervalBadge}</td>
+            <td class="vp-no-click"><button class="danger vp-delete-btn" data-cnk="${vpEscapeHtml(r.cnk)}" data-loc="${vpEscapeHtml(r.voorraadplaats)}">Verwijderen</button></td>
+          </tr>
+        `;
+      }).join("");
+
+      tbody.querySelectorAll(".vp-delete-btn").forEach((btn) => {
+        vpKoppelVerwijderKnop(btn, btn.dataset.cnk, btn.dataset.loc);
+      });
+      tbody.querySelectorAll("tr").forEach((tr) => {
+        tr.addEventListener("click", () => {
+          vpOpenMoveForm(tr.dataset.cnk, tr.dataset.loc, tr.dataset.omschrijving);
+        });
+      });
+    }
+
+    document.getElementById("vp-search").addEventListener("input", vpRenderTable);
+
+    function vpAfdrukken() {
+      const loc = document.getElementById("vp-filter-loc").value;
+      const q = document.getElementById("vp-search").value.trim();
+      const stockFilter = document.getElementById("vp-filter-stock").value;
+      const delen = [];
+      delen.push(loc ? `Voorraadplaats: ${loc}` : "Alle voorraadplaatsen");
+      if (q) delen.push(`zoekterm "${q}"`);
+      if (stockFilter === "met") delen.push("enkel met stock");
+      if (stockFilter === "zonder") delen.push("enkel zonder stock");
+      document.getElementById("vp-print-titel").textContent = delen.join(" — ");
+      window.print();
+    }
+    document.getElementById("vp-print-trigger").addEventListener("click", vpAfdrukken);
+    document.getElementById("vp-filter-loc").addEventListener("change", vpRenderTable);
+    document.getElementById("vp-filter-stock").addEventListener("change", vpRenderTable);
+
+    document.querySelectorAll("table.vp-table thead th[data-key]").forEach((th) => {
+      th.addEventListener("click", () => {
+        const key = th.getAttribute("data-key");
+        if (vpSortKey === key) vpSortDir = vpSortDir === "asc" ? "desc" : "asc";
+        else { vpSortKey = key; vpSortDir = "asc"; }
+        vpRenderTable();
+      });
+    });
+
+    function vpArrayBufferToBase64(buffer) {
+      let binary = "";
+      const bytes = new Uint8Array(buffer);
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+      }
+      return btoa(binary);
+    }
+
+    // ---------- CSV-bestand uploaden (prijslijst per voorraadplaats) ----------
+    const vpUploadTrigger = document.getElementById("vp-upload-trigger");
+    const vpFileInput = document.getElementById("vp-file-input");
+    const vpUploadStatus = document.getElementById("vp-upload-status");
+    vpUploadTrigger.addEventListener("click", () => vpFileInput.click());
+
+    vpFileInput.addEventListener("change", async () => {
+      const file = vpFileInput.files[0];
+      if (!file) return;
+      vpUploadTrigger.disabled = true;
+      vpUploadStatus.className = "vp-status";
+      vpUploadStatus.textContent = `Bezig met verwerken van "${file.name}"...`;
+      try {
+        const buffer = await file.arrayBuffer();
+        const base64 = vpArrayBufferToBase64(buffer);
+        const res = await apiFetch(API_VP, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ actie: "upload-voorraad", fileBase64: base64 }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Upload mislukt.");
+        vpRecords = data.overzicht || [];
+        vpVulLocFilter();
+        vpRenderTable();
+        vpUploadStatus.className = "vp-status ok";
+        vpUploadStatus.textContent =
+          `Verwerkt: ${data.totalInFile} records — ${data.added} nieuw, ${data.updated} bijgewerkt, ` +
+          `${data.herklasseerdNaarVerpakking || 0} naar verpakkingsmaterialen. Totaal: ${vpRecords.length}.`;
+      } catch (err) {
+        vpUploadStatus.className = "vp-status err";
+        vpUploadStatus.textContent = "Fout: " + err.message;
+      } finally {
+        vpUploadTrigger.disabled = false;
+        vpFileInput.value = "";
+      }
+    });
+
+    // ---------- Grondstoffenregister uploaden (vervaldata bijwerken) ----------
+    const vpGrondstoffenTrigger = document.getElementById("vp-grondstoffen-trigger");
+    const vpGrondstoffenFileInput = document.getElementById("vp-grondstoffen-file-input");
+    const vpGrondstoffenStatus = document.getElementById("vp-grondstoffen-status");
+    vpGrondstoffenTrigger.addEventListener("click", () => vpGrondstoffenFileInput.click());
+
+    vpGrondstoffenFileInput.addEventListener("change", async () => {
+      const file = vpGrondstoffenFileInput.files[0];
+      if (!file) return;
+      vpGrondstoffenTrigger.disabled = true;
+      vpGrondstoffenStatus.className = "vp-status";
+      vpGrondstoffenStatus.textContent = `Bezig met verwerken van "${file.name}"...`;
+      try {
+        const buffer = await file.arrayBuffer();
+        const base64 = vpArrayBufferToBase64(buffer);
+        const res = await apiFetch(API_VP, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ actie: "upload-grondstoffen", fileBase64: base64 }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Verwerken mislukt.");
+        vpRecords = data.overzicht || [];
+        vpVulLocFilter();
+        vpRenderTable();
+        vpGrondstoffenStatus.className = "vp-status ok";
+        vpGrondstoffenStatus.textContent =
+          `Verwerkt: ${data.relevantInFile} relevante grondstoffen (vervaldatum > 10/2026) — ` +
+          `${data.vervaldatumBijgewerkt} vervaldata bijgewerkt, ${data.nieuweGrondstoffen} nieuwe grondstoffen ` +
+          `toegevoegd bij "(nog toe te wijzen)". Totaal: ${vpRecords.length}.`;
+      } catch (err) {
+        vpGrondstoffenStatus.className = "vp-status err";
+        vpGrondstoffenStatus.textContent = "Fout: " + err.message;
+      } finally {
+        vpGrondstoffenTrigger.disabled = false;
+        vpGrondstoffenFileInput.value = "";
+      }
+    });
+
+    // ---------- Product toevoegen ----------
+    const vpAddTrigger = document.getElementById("vp-add-trigger");
+    const vpAddOverlay = document.getElementById("vp-add-overlay");
+    const vpAddCancel = document.getElementById("vp-add-cancel");
+    const vpAddSubmit = document.getElementById("vp-add-submit");
+    const vpAddError = document.getElementById("vp-add-error");
+    const vpAddLocInput = document.getElementById("vp-add-loc");
+    const vpAddCnkInput = document.getElementById("vp-add-cnk");
+    const vpAddOmschrijvingInput = document.getElementById("vp-add-omschrijving");
+    const vpAddStockInput = document.getElementById("vp-add-stock");
+    const vpLocOptions = document.getElementById("vp-loc-options");
+
+    function vpOpenAddForm() {
+      vpAddError.textContent = "";
+      vpAddLocInput.value = ""; vpAddCnkInput.value = ""; vpAddOmschrijvingInput.value = ""; vpAddStockInput.value = "";
+      const locs = Array.from(new Set(vpRecords.map((r) => r.voorraadplaats).filter(Boolean))).sort();
+      vpLocOptions.innerHTML = locs.map((l) => `<option value="${vpEscapeHtml(l)}"></option>`).join("");
+      vpAddOverlay.classList.add("open");
+      vpAddLocInput.focus();
+    }
+    function vpCloseAddForm() { vpAddOverlay.classList.remove("open"); }
+
+    vpAddTrigger.addEventListener("click", vpOpenAddForm);
+    vpAddCancel.addEventListener("click", vpCloseAddForm);
+    vpAddOverlay.addEventListener("click", (e) => { if (e.target === vpAddOverlay) vpCloseAddForm(); });
+
+    vpAddSubmit.addEventListener("click", async () => {
+      const voorraadplaats = vpAddLocInput.value.trim();
+      const cnk = vpAddCnkInput.value.trim();
+      const omschrijving = vpAddOmschrijvingInput.value.trim();
+      const stock = vpAddStockInput.value.trim();
+      if (!cnk || !voorraadplaats) {
+        vpAddError.textContent = "CNK en voorraadplaats zijn verplicht.";
+        return;
+      }
+      vpAddSubmit.disabled = true;
+      try {
+        const res = await apiFetch(API_VP, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ actie: "toevoegen", voorraadplaats, cnk, omschrijving, stock }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Toevoegen mislukt.");
+        vpRecords = data.overzicht || [];
+        vpVulLocFilter();
+        vpRenderTable();
+        vpCloseAddForm();
+      } catch (err) {
+        vpAddError.textContent = "Fout: " + err.message;
+      } finally {
+        vpAddSubmit.disabled = false;
+      }
+    });
+
+    // ---------- Product verwijderen ----------
+    function vpKoppelVerwijderKnop(button, cnk, voorraadplaats) {
+      let bevestigen = false;
+      let timeoutId;
+      button.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (!bevestigen) {
+          bevestigen = true;
+          button.textContent = "Zeker? Klik opnieuw";
+          timeoutId = setTimeout(() => { bevestigen = false; button.textContent = "Verwijderen"; }, 3000);
+        } else {
+          clearTimeout(timeoutId);
+          vpVerwijderProduct(cnk, voorraadplaats);
+        }
+      });
+    }
+
+    async function vpVerwijderProduct(cnk, voorraadplaats) {
+      try {
+        const res = await apiFetch(`${API_VP}?id=${encodeURIComponent(vpKeyOf({ cnk, voorraadplaats }))}`, { method: "DELETE" });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Verwijderen mislukt.");
+        vpRecords = data.overzicht || [];
+        vpVulLocFilter();
+        vpRenderTable();
+        setStatus("Product verwijderd uit het overzicht.");
+      } catch (err) {
+        setStatus("Fout bij verwijderen: " + err.message);
+      }
+    }
+
+    // ---------- Voorraadplaats wijzigen ----------
+    const vpMoveOverlay = document.getElementById("vp-move-overlay");
+    const vpMoveSub = document.getElementById("vp-move-sub");
+    const vpMoveSelect = document.getElementById("vp-move-select");
+    const vpMoveInput = document.getElementById("vp-move-input");
+    const vpMoveCancel = document.getElementById("vp-move-cancel");
+    const vpMoveSubmit = document.getElementById("vp-move-submit");
+    const vpMoveError = document.getElementById("vp-move-error");
+    let vpMoveContext = null;
+
+    function vpOpenMoveForm(cnk, voorraadplaats, omschrijving) {
+      vpMoveContext = { cnk, voorraadplaats };
+      vpMoveSub.textContent = `${omschrijving || "(geen omschrijving)"} — CNK ${cnk} — nu: ${voorraadplaats}`;
+      vpMoveError.textContent = "";
+      const locs = Array.from(new Set(vpRecords.map((r) => r.voorraadplaats).filter(Boolean))).sort();
+      vpMoveSelect.innerHTML =
+        locs.map((l) => `<option value="${vpEscapeHtml(l)}">${vpEscapeHtml(l)}</option>`).join("") +
+        '<option value="__new__">+ Nieuwe voorraadplaats...</option>';
+      vpMoveSelect.value = locs.includes(voorraadplaats) ? voorraadplaats : "__new__";
+      vpMoveInput.style.display = vpMoveSelect.value === "__new__" ? "block" : "none";
+      vpMoveInput.value = vpMoveSelect.value === "__new__" ? voorraadplaats : "";
+      vpMoveOverlay.classList.add("open");
+      vpMoveSelect.focus();
+    }
+    function vpCloseMoveForm() { vpMoveOverlay.classList.remove("open"); vpMoveContext = null; }
+    function vpCurrentMoveValue() {
+      return vpMoveSelect.value === "__new__" ? vpMoveInput.value.trim() : vpMoveSelect.value;
+    }
+    vpMoveSelect.addEventListener("change", () => {
+      vpMoveInput.style.display = vpMoveSelect.value === "__new__" ? "block" : "none";
+      if (vpMoveSelect.value === "__new__") vpMoveInput.focus();
+    });
+    vpMoveCancel.addEventListener("click", vpCloseMoveForm);
+    vpMoveOverlay.addEventListener("click", (e) => { if (e.target === vpMoveOverlay) vpCloseMoveForm(); });
+
+    vpMoveSubmit.addEventListener("click", async () => {
+      if (!vpMoveContext) return;
+      const nieuwe = vpCurrentMoveValue();
+      if (!nieuwe) { vpMoveError.textContent = "Nieuwe voorraadplaats is verplicht."; return; }
+      if (nieuwe === vpMoveContext.voorraadplaats) { vpCloseMoveForm(); return; }
+      vpMoveSubmit.disabled = true;
+      try {
+        const res = await apiFetch(`${API_VP}?id=${encodeURIComponent(vpKeyOf(vpMoveContext))}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ newVoorraadplaats: nieuwe }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Wijzigen mislukt.");
+        vpRecords = data.overzicht || [];
+        vpVulLocFilter();
+        vpRenderTable();
+        vpCloseMoveForm();
+      } catch (err) {
+        vpMoveError.textContent = "Fout: " + err.message;
+      } finally {
+        vpMoveSubmit.disabled = false;
+      }
+    });
+  </script>
+
+  <footer class="maker-balk">Gemaakt door Apr. Vannieuwenhuyse Thomas</footer>
+</body>
+</html>
