@@ -971,7 +971,8 @@
         el.querySelector(".recept-winst").textContent = "Winst/verpakking: " + euro(winstPerEenheid);
         el.querySelector(".recept-detail").textContent =
           `${recept.soort === "capsules" ? `capsules (${recept.aantalGelules} gelules) · ` : ""}${recept.ingredienten.length} ingrediënt(en) · AP ${euro(ap)} · PP ${euro(recept.verkoopprijs)} incl. BTW` +
-          (recept.aantalVerkocht ? ` · ${recept.aantalVerkocht} verkocht · totale winst ${euro(totaleWinst)}` : "");
+          (recept.aantalVerkocht ? ` · ${recept.aantalVerkocht} verkocht · totale winst ${euro(totaleWinst)}` : "") +
+          (recept.bijgewerkt || recept.aangemaakt ? ` · laatst bijgewerkt ${new Date(recept.bijgewerkt || recept.aangemaakt).toLocaleDateString("nl-BE")}` : "");
         el.querySelector(".bewerk-btn").addEventListener("click", () => bewerkRecept(recept));
         koppelVerwijderKnop(el.querySelector(".delete-btn"), recept.id);
         container.appendChild(el);
