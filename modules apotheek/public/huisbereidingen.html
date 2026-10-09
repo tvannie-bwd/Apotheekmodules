@@ -178,7 +178,7 @@
 
   <details class="facturen" id="facturen-sectie">
     <summary>📄 Facturen &amp; grondstofprijzen <span id="gs-teller" style="font-weight:normal; font-size:0.8rem; color:#777;"></span></summary>
-    <p class="uitleg" style="font-size:0.85rem; color:#666;">Upload facturen van Pharma Chemicals (PDF). Het programma leest de grondstoffen met aankoopprijs en korting uit. Daarna kies je een grondstof in een bereiding en vult de prijs zich automatisch in, telkens met de recentste factuur. Voorlopig enkel de actieve stoffen; hulpstoffen en verpakkingen worden wel bewaard.</p>
+    <p class="uitleg" style="font-size:0.85rem; color:#666;">Upload facturen van Pharma Chemicals of Magis-Pharma (PDF). Het programma leest de grondstoffen met aankoopprijs en korting uit. Daarna kies je een grondstof in een bereiding en vult de prijs zich automatisch in, telkens met de recentste factuur. Voorlopig enkel de actieve stoffen; hulpstoffen en verpakkingen worden wel bewaard.</p>
     <input id="factuur-input" type="file" accept="application/pdf,.pdf" multiple />
     <div id="factuur-voorbeeld"></div>
     <div id="factuur-acties" style="display:none; margin:6px 0;">
@@ -190,6 +190,7 @@
       <input id="gs-zoek" type="text" placeholder="Zoeken op naam of CNK..." style="flex:1; min-width:180px;" />
       <select id="gs-filter">
         <option value="actief">Actieve stoffen</option>
+        <option value="supplement">Supplementen</option>
         <option value="hulpstof">Hulpstoffen &amp; verpakkingen</option>
         <option value="alles">Alles</option>
       </select>
@@ -372,7 +373,7 @@
           infoEl.textContent = "";
           const g = rij.cnk ? grondstoffenPerCnk[rij.cnk] : null;
           if (!g) return;
-          infoEl.append(`🔗 Prijs uit factuur ${g.factuur} (${fmtDatum(g.datum)})`);
+          infoEl.append(`🔗 Prijs uit factuur ${g.factuur} (${fmtDatum(g.datum)})${btwAankoop(rij) !== VASTE_BTW_BEREIDING ? ` · BTW ${btwAankoop(rij)}%` : ""}`);
           const b = document.createElement("button");
           b.type = "button"; b.textContent = "ontkoppel";
           b.addEventListener("click", () => { delete rij.cnk; toonInfo(); });
@@ -387,6 +388,7 @@
           rij.naam = naamI.value;
           const g = vindGrondstofOpLabel(naamI.value);
           if (g) {
+            if (naamI.value.trim() === g.cnk) { naamI.value = grondstofLabel(g); rij.naam = naamI.value; }
             rij.cnk = g.cnk;
             pasKoppelingToe(rij);
             prijsI.value = rij.aankoopprijs; inhoudI.value = rij.verpakkingsinhoud;
@@ -495,13 +497,29 @@
     let grondstoffenPerCnk = {};
     let ingelezenFacturen = [];
     let laatsteRecepten = [];
-    const KOPPELBARE_TYPES = ["actief"]; // hulpstoffen & verpakkingen: later
+    const KOPPELBARE_TYPES = ["actief", "supplement", "hulpstof"];
 
     function fmtGetal(n) { return (Number(n) || 0).toLocaleString("nl-BE", { maximumFractionDigits: 3 }); }
     function fmtDatum(iso) { return iso ? iso.split("-").reverse().join("/") : ""; }
-    function grondstofLabel(g) { return `${g.naam} (${fmtGetal(g.verpakkingsinhoud)} ${g.eenheid})`; }
+    // Staat dezelfde stof in dezelfde verpakking bij twee leveranciers (verschillende CNK), dan komt de leverancier in het label.
+    function basisLabel(g) { return `${g.naam} (${fmtGetal(g.verpakkingsinhoud)} ${g.eenheid})`; }
+    function leverancierVan(g) { return g.leverancier || "Pharma Chemicals"; }
+    function grondstofLabel(g) {
+      const b = basisLabel(g);
+      const dubbel = grondstoffen.some((x) => x.cnk !== g.cnk && basisLabel(x).toLowerCase() === b.toLowerCase());
+      return dubbel ? `${b} · ${leverancierVan(g)}` : b;
+    }
     function nettoPerEenheid(g) { return (g.prijs * (1 - g.korting / 100)) / (g.verpakkingsinhoud || 1); }
 
+    // BTW van de aankoop: standaard 21% (grondstoffen); een gekoppeld product neemt het tarief van de factuur (supplementen: 6%).
+    function btwAankoop(i) {
+      const g = i && i.cnk ? grondstoffenPerCnk[i.cnk] : null;
+      return g && Number.isFinite(Number(g.btw)) ? Number(g.btw) : VASTE_BTW_BEREIDING;
+    }
+    function btwTekst(ingredienten) {
+      const t = [...new Set(ingredienten.filter((i) => (i.naam || "").trim() || i.cnk).map(btwAankoop))].sort((a, b) => b - a);
+      return (t.length ? t : [VASTE_BTW_BEREIDING]).join("% / ") + "%";
+    }
     function pasKoppelingToe(rij) {
       const g = rij.cnk ? grondstoffenPerCnk[rij.cnk] : null;
       if (g) {
@@ -534,7 +552,12 @@
       for (const g of grondstoffen.filter((x) => KOPPELBARE_TYPES.includes(x.type))) {
         const o = document.createElement("option");
         o.value = grondstofLabel(g);
+        o.label = `${g.cnk} · ${o.value}`; // zoeken op CNK werkt ook
         dl.appendChild(o);
+        const oc = document.createElement("option"); // ...en typen van enkel de CNK
+        oc.value = g.cnk;
+        oc.label = o.value;
+        dl.appendChild(oc);
       }
     }
 
@@ -542,7 +565,8 @@
       const t = tekst.trim().toLowerCase();
       if (!t) return null;
       const kandidaten = grondstoffen.filter((g) => KOPPELBARE_TYPES.includes(g.type));
-      return kandidaten.find((g) => grondstofLabel(g).toLowerCase() === t) || null;
+      // een exacte CNK koppelt altijd, ook als het product als hulpstof staat ingesteld
+      return kandidaten.find((g) => grondstofLabel(g).toLowerCase() === t) || grondstoffen.find((g) => g.cnk === t) || null;
     }
 
     function tekenGrondstoffen() {
@@ -555,14 +579,14 @@
         (!zoek || g.naam.toLowerCase().includes(zoek) || g.cnk.includes(zoek)));
       document.getElementById("gs-leeg").style.display = grondstoffen.length === 0 ? "block" : "none";
       document.getElementById("gs-tabel").style.display = grondstoffen.length === 0 ? "none" : "table";
-      document.getElementById("gs-teller").textContent = grondstoffen.length ? `· ${grondstoffen.filter((g) => g.type === "actief").length} actieve stoffen` : "";
+      document.getElementById("gs-teller").textContent = grondstoffen.length ? `· ${grondstoffen.filter((g) => g.type === "actief").length} actieve stoffen, ${grondstoffen.filter((g) => g.type === "supplement").length} supplementen, ${grondstoffen.filter((g) => g.type === "hulpstof").length} hulpstoffen / verpakkingen` : "";
       document.getElementById("gs-facturen").textContent = ingelezenFacturen.length ? `Ingelezen facturen (${ingelezenFacturen.length}): ` + ingelezenFacturen.sort().join(", ") : "";
       for (const g of zichtbaar) {
         const tr = document.createElement("tr");
         const hist = (g.historiek || []).map((h) => `${fmtDatum(h.datum)}: € ${h.prijs.toFixed(2)} (−${h.korting}%)`).join("\n");
         tr.title = hist;
         tr.innerHTML = `<td></td><td></td><td class="num"></td><td class="num"></td><td class="num"></td><td></td>
-          <td><select><option value="actief">Actief</option><option value="hulpstof">Hulpstof / verp.</option></select></td>
+          <td><select><option value="actief">Actief</option><option value="supplement">Supplement</option><option value="hulpstof">Hulpstof / verp.</option></select></td>
           <td><button class="klein danger" title="Verwijderen">×</button></td>`;
         const td = tr.querySelectorAll("td");
         td[0].textContent = g.naam;
@@ -570,7 +594,7 @@
         td[2].textContent = euro(g.prijs);
         td[3].textContent = g.korting + "%";
         td[4].textContent = `€ ${nettoPerEenheid(g).toLocaleString("nl-BE", { minimumFractionDigits: 4, maximumFractionDigits: 4 })} / ${g.eenheid}`;
-        td[5].textContent = `${fmtDatum(g.datum)} (${g.factuur})`;
+        td[5].textContent = `${fmtDatum(g.datum)} (${g.factuur}) · ${leverancierVan(g)}`;
         const sel = tr.querySelector("select");
         sel.value = g.type;
         sel.addEventListener("change", async () => {
@@ -672,7 +696,7 @@
         } else {
           const r = v.res;
           blok.innerHTML = `<div><strong></strong> <span class="kop"></span></div>`;
-          blok.querySelector("strong").textContent = `Factuur ${r.factuur} · ${fmtDatum(r.datum)}`;
+          blok.querySelector("strong").textContent = `Factuur ${r.factuur} · ${fmtDatum(r.datum)} · ${r.leverancier}`;
           blok.querySelector(".kop").innerHTML = ` · ${r.lijnen.length} lijnen · ` +
             (r.klopt ? `<span class="fact-ok">totaal klopt (€ ${r.som.toFixed(2)})</span>` : `<span class="fact-slecht">let op: som lijnen € ${r.som.toFixed(2)} ≠ factuurtotaal ${r.totaalFactuur === null ? "?" : "€ " + r.totaalFactuur.toFixed(2)}</span>`) +
             (v.alIngelezen ? ` · <span class="fact-slecht">al ingelezen, wordt overgeslagen</span>` : "") +
@@ -682,7 +706,7 @@
           tabel.innerHTML = `<thead><tr><th>CNK</th><th>Naam</th><th>Verpakking</th><th class="num">Prijs</th><th class="num">Korting</th><th>Type</th></tr></thead><tbody></tbody>`;
           for (const l of r.lijnen) {
             const tr = document.createElement("tr");
-            tr.innerHTML = `<td></td><td></td><td></td><td class="num"></td><td class="num"></td><td><select><option value="actief">Actief</option><option value="hulpstof">Hulpstof / verp.</option></select></td>`;
+            tr.innerHTML = `<td></td><td></td><td></td><td class="num"></td><td class="num"></td><td><select><option value="actief">Actief</option><option value="supplement">Supplement</option><option value="hulpstof">Hulpstof / verp.</option></select></td>`;
             const td = tr.querySelectorAll("td");
             td[0].textContent = l.cnk;
             td[1].textContent = l.naam;
@@ -722,7 +746,7 @@
         try {
           const res = await apiFetch(`${API}?resource=grondstoffen`, {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ factuur: { nr: r.factuur, datum: r.datum, lijnen: r.lijnen.filter((l) => l.verpakkingsinhoud) } }),
+            body: JSON.stringify({ factuur: { nr: r.factuur, datum: r.datum, leverancier: r.leverancier, lijnen: r.lijnen.filter((l) => l.verpakkingsinhoud) } }),
           });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || "Opslaan mislukt");
@@ -754,7 +778,7 @@
       const kostPerIngredient = ingredienten.map((i) => {
         const prijsPerAankoopEenheid =
           (Number(i.aankoopprijs) || 0) *
-          (1 + VASTE_BTW_BEREIDING / 100) *
+          (1 + btwAankoop(i) / 100) *
           (1 - (Number(i.korting) || 0) / 100) /
           (Number(i.verpakkingsinhoud) || 1);
         const kostVoorVolledigeBereiding = prijsPerAankoopEenheid * hoeveelheidTotaal(i, opties);
@@ -779,7 +803,7 @@
 
       const overzicht = document.getElementById("prijs-overzicht");
       overzicht.innerHTML = `
-        <div class="regel ap"><span>Aankoopprijs (AP)${opties.capsules ? "" : " per eenheid"} <span style="font-weight:normal; font-size:0.78rem; color:#888;">(grondstoffen incl. 21% BTW)</span></span><span>${euro(ap)}</span></div>
+        <div class="regel ap"><span>Aankoopprijs (AP)${opties.capsules ? "" : " per eenheid"} <span style="font-weight:normal; font-size:0.78rem; color:#888;">(incl. ${btwTekst(ingredientRijen)} BTW aankoop)</span></span><span>${euro(ap)}</span></div>
         ${perGelule !== null ? `<div class="regel"><span>Kostprijs grondstoffen per gelule</span><span>€ ${perGelule.toLocaleString("nl-BE", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</span></div>` : ""}
         <div class="regel"><span>Verkoopprijs (PP)${opties.capsules ? "" : " per eenheid"} <span style="font-weight:normal; font-size:0.78rem; color:#888;">(incl. 6% BTW)</span></span><span>${euro(verkoopprijs)}</span></div>
         <div class="regel"><span>Verkoopprijs excl. 6% BTW</span><span>${euro(verkoopprijsExcl)}</span></div>
