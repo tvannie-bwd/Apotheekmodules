@@ -1,9 +1,0 @@
-{
-  "name": "apotheek-magistraal",
-  "version": "0.1.0",
-  "private": true,
-  "description": "Module 1: Magistraal — vrije notities bij magistrale bereidingen",
-  "dependencies": {
-    "@netlify/blobs": "^8.1.0"
-  }
-}
