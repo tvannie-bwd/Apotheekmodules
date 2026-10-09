@@ -79,6 +79,7 @@ export default async (req) => {
       let body;
       try { body = await req.json(); } catch { return json({ error: "Ongeldige JSON in request body." }, 400); }
       const f = body.factuur;
+      if (f && f.nr) f.nr = String(f.nr).replace(/[^\w.-]/g, "-");
       if (!f || !f.nr || !/^\d{4}-\d{2}-\d{2}$/.test(f.datum || "") || !Array.isArray(f.lijnen)) {
         return json({ error: "Factuurnummer, datum en lijnen zijn verplicht." }, 400);
       }
@@ -101,6 +102,8 @@ export default async (req) => {
           ...basis,
           cnk: String(l.cnk),
           naam: isNieuwste || !bestaand ? (l.naam || basis.naam || "") : basis.naam,
+          btw: isNieuwste ? getalOf(l.btw, 21) : getalOf(basis.btw, 21),
+          leverancier: isNieuwste ? (f.leverancier || basis.leverancier || "") : (basis.leverancier || ""),
           omschrijving: isNieuwste ? (l.omschrijving || basis.omschrijving || "") : basis.omschrijving,
           verpakkingsinhoud: isNieuwste ? getalOf(l.verpakkingsinhoud, 1) : basis.verpakkingsinhoud,
           eenheid: isNieuwste ? (l.eenheid ?? "") : basis.eenheid,
@@ -110,7 +113,7 @@ export default async (req) => {
           factuur: isNieuwste ? String(f.nr) : basis.factuur,
           lot: isNieuwste ? (l.lot ?? "") : basis.lot,
           // type blijft wat de gebruiker eerder koos; enkel bij een nieuw product de gok uit de factuur
-          type: bestaand?.type ?? (l.type === "hulpstof" ? "hulpstof" : "actief"),
+          type: bestaand?.type ?? (["hulpstof", "supplement"].includes(l.type) ? l.type : "actief"),
           historiek,
         };
         await store.setJSON(key, record);
@@ -128,7 +131,7 @@ export default async (req) => {
       try { body = await req.json(); } catch { return json({ error: "Ongeldige JSON in request body." }, 400); }
       const record = {
         ...bestaand,
-        type: ["actief", "hulpstof"].includes(body.type) ? body.type : bestaand.type,
+        type: ["actief", "hulpstof", "supplement"].includes(body.type) ? body.type : bestaand.type,
         naam: typeof body.naam === "string" && body.naam.trim() ? body.naam.trim() : bestaand.naam,
       };
       await store.setJSON(GRONDSTOF_PREFIX + cnkParam, record);
