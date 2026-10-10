@@ -5,6 +5,7 @@ import { getStore } from "@netlify/blobs";
 const KEY_PREFIX = "recept-";
 const GRONDSTOF_PREFIX = "grondstof-";
 const FACTUUR_PREFIX = "factuur-";
+const VERKOOP_PREFIX = "verkoop-";
 
 async function hmacHex(bericht, geheim) {
   const key = await crypto.subtle.importKey(
@@ -146,6 +147,62 @@ export default async (req) => {
     return json({ error: "Methode niet toegestaan." }, 405);
   }
 
+  // ---- Verkoopprijzen van EB-producten (?resource=verkoopprijzen) ----
+  if (url.searchParams.get("resource") === "verkoopprijzen") {
+    const cnkParam = url.searchParams.get("cnk");
+
+    if (req.method === "GET") {
+      const { blobs } = await store.list({ prefix: VERKOOP_PREFIX });
+      const lijst = (await Promise.all(blobs.map((b) => store.get(b.key, { type: "json" })))).filter(Boolean);
+      return json({ lijst });
+    }
+
+    if (req.method === "POST") {
+      // CSV-import: array van producten, samengevoegd op CNK. Een ingevulde prijs blijft staan.
+      let body;
+      try { body = await req.json(); } catch { return json({ error: "Ongeldige JSON in request body." }, 400); }
+      const rijen = Array.isArray(body) ? body : body.rows;
+      if (!Array.isArray(rijen)) return json({ error: "Verwacht een lijst van producten." }, 400);
+      let geimporteerd = 0;
+      for (const r of rijen) {
+        const cnk = r.cnk ? String(r.cnk).replace(/[^0-9A-Za-z_-]/g, "") : "";
+        if (!cnk) continue;
+        const bestaand = (await store.get(VERKOOP_PREFIX + cnk, { type: "json" })) || {};
+        await store.setJSON(VERKOOP_PREFIX + cnk, {
+          cnk,
+          naam: r.naam ?? bestaand.naam ?? "",
+          voorraad: getalOf(r.voorraad, getalOf(bestaand.voorraad)),
+          tot2026: getalOf(r.tot2026, getalOf(bestaand.tot2026)),
+          tot2025: getalOf(r.tot2025, getalOf(bestaand.tot2025)),
+          tot2024: getalOf(r.tot2024, getalOf(bestaand.tot2024)),
+          prijs: bestaand.prijs ?? null,
+          bijgewerkt: new Date().toISOString(),
+        });
+        geimporteerd++;
+      }
+      return json({ imported: geimporteerd }, 201);
+    }
+
+    if (req.method === "PUT") {
+      if (!cnkParam) return json({ error: "Parameter 'cnk' is verplicht." }, 400);
+      const bestaand = await store.get(VERKOOP_PREFIX + cnkParam, { type: "json" });
+      if (!bestaand) return json({ error: "Product niet gevonden." }, 404);
+      let body;
+      try { body = await req.json(); } catch { return json({ error: "Ongeldige JSON in request body." }, 400); }
+      const prijs = body.prijs === null || body.prijs === "" || body.prijs === undefined ? null : getalOf(body.prijs, null);
+      const record = { ...bestaand, prijs, bijgewerkt: new Date().toISOString() };
+      await store.setJSON(VERKOOP_PREFIX + cnkParam, record);
+      return json(record);
+    }
+
+    if (req.method === "DELETE") {
+      if (!cnkParam) return json({ error: "Parameter 'cnk' is verplicht." }, 400);
+      await store.delete(VERKOOP_PREFIX + cnkParam);
+      return json({ cnk: cnkParam, deleted: true });
+    }
+    return json({ error: "Methode niet toegestaan." }, 405);
+  }
+
   if (req.method === "GET") {
     if (id) {
       const recept = await store.get(KEY_PREFIX + id, { type: "json" });
@@ -178,6 +235,7 @@ export default async (req) => {
       naam: body.naam,
       soort: body.soort === "capsules" ? "capsules" : "normaal",
       aantalGelules: body.soort === "capsules" ? getalOf(body.aantalGelules) : 0,
+      cnk: body.cnk ? String(body.cnk).replace(/[^0-9A-Za-z_-]/g, "") : "",
       eenheidLabel: body.eenheidLabel ?? "",
       aantalVerkoopeenheden: getalOf(body.aantalVerkoopeenheden, 1),
       verkoopprijs: getalOf(body.verkoopprijs),
@@ -206,6 +264,7 @@ export default async (req) => {
       naam: body.naam ?? existing.naam,
       soort: body.soort !== undefined ? (body.soort === "capsules" ? "capsules" : "normaal") : (existing.soort ?? "normaal"),
       aantalGelules: body.soort !== undefined ? (body.soort === "capsules" ? getalOf(body.aantalGelules) : 0) : (existing.aantalGelules ?? 0),
+      cnk: body.cnk !== undefined ? String(body.cnk || "").replace(/[^0-9A-Za-z_-]/g, "") : (existing.cnk ?? ""),
       eenheidLabel: body.eenheidLabel ?? existing.eenheidLabel,
       aantalVerkoopeenheden: body.aantalVerkoopeenheden !== undefined ? getalOf(body.aantalVerkoopeenheden, 1) : existing.aantalVerkoopeenheden,
       verkoopprijs: body.verkoopprijs !== undefined ? getalOf(body.verkoopprijs) : existing.verkoopprijs,
