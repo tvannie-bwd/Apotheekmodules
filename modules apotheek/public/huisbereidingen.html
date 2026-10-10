@@ -125,6 +125,19 @@
   
     .koppel-info { font-size: 0.74rem; color: #2f7a4d; margin-top: 2px; }
     .koppel-info button { font-size: 0.72rem; padding: 0 4px; margin-left: 4px; }
+    .vp-tegels { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin: 8px 0; }
+    .vp-tegel { border: 1px solid #ddd; border-radius: 6px; padding: 8px 10px; background: white; }
+    .vp-tegel .vp-label { font-size: 0.7rem; text-transform: uppercase; color: #777; }
+    .vp-tegel .vp-waarde { font-size: 1.1rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .vp-wrap { overflow-x: auto; border: 1px solid #ddd; border-radius: 6px; background: white; }
+    table.vp-tabel { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 760px; }
+    table.vp-tabel th, table.vp-tabel td { padding: 6px 8px; text-align: right; border-bottom: 1px solid #eee; white-space: nowrap; }
+    table.vp-tabel th { font-size: 0.7rem; text-transform: uppercase; color: #777; background: #fafafa; }
+    table.vp-tabel th:nth-child(2), table.vp-tabel td:nth-child(2) { text-align: left; white-space: normal; }
+    table.vp-tabel td.vp-omzet { font-weight: 600; color: #2f6b3f; }
+    table.vp-tabel input.vp-prijs { width: 80px; text-align: right; padding: 4px 6px; }
+    table.vp-tabel input.vp-prijs.ingevuld { background: #fff4e5; border-color: #d69e2e; }
+    @media print { #verkoopprijzen-sectie { display: none !important; } }
     details.facturen { border: 1px solid #ddd; border-radius: 8px; padding: 8px 12px; margin-bottom: 16px; background: #fafafa; }
     details.facturen > summary { cursor: pointer; font-weight: 600; }
     .fact-blok { border: 1px solid #ddd; border-radius: 6px; padding: 6px 10px; margin: 8px 0; background: #fff; }
@@ -235,6 +248,10 @@
         <input id="recept-verkoopprijs" type="number" step="0.01" min="0" placeholder="bv. 9.50" />
       </div>
     </div>
+    <div style="max-width:260px;">
+      <label for="recept-cnk">CNK van het EB-product (optioneel)</label>
+      <input id="recept-cnk" type="text" inputmode="numeric" placeholder="bv. 1234567" />
+    </div>
 
     <div>
       <label>Ingrediënten</label>
@@ -290,6 +307,31 @@
   <h2>Vaste recepten</h2>
   <div id="recepten-list"></div>
   <p class="empty" id="recepten-empty" style="display:none;">Nog geen huisbereidingen opgeslagen.</p>
+
+  <details class="facturen" id="verkoopprijzen-sectie">
+    <summary>📈 Verkoopprijzen EB-producten <span id="vp-teller" style="font-weight:normal; font-size:0.8rem; color:#777;"></span></summary>
+    <p class="uitleg" style="font-size:0.85rem; color:#666;">Eigen bereidingen (EB), gesorteerd op verkoop. Vul per product de verkoopprijs in; de omzet wordt automatisch berekend en bewaard. Met "CSV importeren" ververs je de verkoopaantallen (samengevoegd op CNK, een ingevulde prijs blijft staan).</p>
+    <div class="vp-tegels">
+      <div class="vp-tegel"><div class="vp-label">Producten</div><div class="vp-waarde" id="vp-aantal">0</div></div>
+      <div class="vp-tegel"><div class="vp-label">Prijzen ingevuld</div><div class="vp-waarde" id="vp-ingevuld">0</div></div>
+      <div class="vp-tegel"><div class="vp-label">Omzet 2026 (YTD)</div><div class="vp-waarde" id="vp-omzet26">€ 0,00</div></div>
+      <div class="vp-tegel"><div class="vp-label">Omzet totaal (3 jaar)</div><div class="vp-waarde" id="vp-omzet3j">€ 0,00</div></div>
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+      <input type="search" id="vp-zoek" placeholder="Zoek product of CNK-code…" autocomplete="off" style="flex:1 1 200px; width:auto;" />
+      <button class="klein" id="vp-import-btn" type="button">CSV importeren</button>
+      <input type="file" id="vp-import-file" accept=".csv,text/csv" style="display:none; width:auto;" />
+      <button class="klein" id="vp-vernieuw-btn" type="button">Vernieuwen</button>
+    </div>
+    <p id="vp-status" style="font-size:0.8rem; color:#777; min-height:1.1em; margin:0 0 6px;"></p>
+    <p class="empty" id="vp-leeg" style="display:none;">Nog geen producten. Importeer een CSV met de verkoophistoriek.</p>
+    <div class="vp-wrap" id="vp-wrap" style="display:none;">
+      <table class="vp-tabel">
+        <thead><tr><th>#</th><th>Product</th><th>Verkoopprijs</th><th title="Aankoopprijs (AP) per eenheid van het vaste recept met dit CNK">Apotheekprijs</th><th>Voorraad</th><th>2026 (YTD)</th><th>2025</th><th>2024</th><th>Totaal 3j</th><th>Omzet 2026</th><th>Omzet 3j</th></tr></thead>
+        <tbody id="vp-body"></tbody>
+      </table>
+    </div>
+  </details>
 
   <script src="/factuur-parser.js"></script>
   <script>
@@ -826,6 +868,7 @@
 
     function resetFormulier() {
       document.getElementById("recept-naam").value = "";
+      document.getElementById("recept-cnk").value = "";
       document.getElementById("recept-eenheid-label").value = "";
       document.getElementById("recept-aantal-eenheden").value = "";
       document.getElementById("recept-verkoopprijs").value = "";
@@ -866,7 +909,7 @@
       }
       setStatus("Bezig met opslaan...");
       try {
-        const body = { naam, soort, aantalGelules, eenheidLabel, aantalVerkoopeenheden, verkoopprijs, aantalVerkocht, ingredienten: geldigeIngredienten, extraKosten: geldigeExtraKosten };
+        const body = { cnk: document.getElementById("recept-cnk").value.trim(), naam, soort, aantalGelules, eenheidLabel, aantalVerkoopeenheden, verkoopprijs, aantalVerkocht, ingredienten: geldigeIngredienten, extraKosten: geldigeExtraKosten };
         const url = bewerktReceptId ? `${API}?id=${bewerktReceptId}` : API;
         const methode = bewerktReceptId ? "PUT" : "POST";
         const res = await apiFetch(url, {
@@ -886,6 +929,7 @@
 
     function bewerkRecept(recept) {
       document.getElementById("recept-naam").value = recept.naam;
+      document.getElementById("recept-cnk").value = recept.cnk || "";
       document.getElementById("recept-eenheid-label").value = recept.eenheidLabel || "";
       document.getElementById("recept-aantal-eenheden").value = recept.aantalVerkoopeenheden;
       document.getElementById("recept-verkoopprijs").value = recept.verkoopprijs;
@@ -938,6 +982,7 @@
         await laadGrondstoffen();
         laatsteRecepten = data.lijst;
         renderRecepten(data.lijst);
+        if (vpGeladen) vpTeken();
         setStatus("Bijgewerkt om " + new Date().toLocaleTimeString());
       } catch (err) {
         setStatus("Fout bij laden: " + err.message);
@@ -970,7 +1015,7 @@
         el.querySelector(".recept-naam").textContent = recept.naam + (recept.eenheidLabel && recept.soort !== "capsules" ? ` (${recept.eenheidLabel})` : "");
         el.querySelector(".recept-winst").textContent = "Winst/verpakking: " + euro(winstPerEenheid);
         el.querySelector(".recept-detail").textContent =
-          `${recept.soort === "capsules" ? `capsules (${recept.aantalGelules} gelules) · ` : ""}${recept.ingredienten.length} ingrediënt(en) · AP ${euro(ap)} · PP ${euro(recept.verkoopprijs)} incl. BTW` +
+          `${recept.soort === "capsules" ? `capsules (${recept.aantalGelules} gelules) · ` : ""}${recept.cnk ? `CNK ${recept.cnk} · ` : ""}${recept.ingredienten.length} ingrediënt(en) · AP ${euro(ap)} · PP ${euro(recept.verkoopprijs)} incl. BTW` +
           (recept.aantalVerkocht ? ` · ${recept.aantalVerkocht} verkocht · totale winst ${euro(totaleWinst)}` : "") +
           (recept.bijgewerkt || recept.aangemaakt ? ` · laatst bijgewerkt ${new Date(recept.bijgewerkt || recept.aangemaakt).toLocaleDateString("nl-BE")}` : "");
         el.querySelector(".bewerk-btn").addEventListener("click", () => bewerkRecept(recept));
@@ -978,6 +1023,147 @@
         container.appendChild(el);
       }
     }
+
+
+    // ---- Verkoopprijzen EB-producten ----
+    let vpRijen = [];
+    let vpGeladen = false;
+    const vpTimers = {};
+    const vpTot3 = (r) => (r.tot2026 || 0) + (r.tot2025 || 0) + (r.tot2024 || 0);
+    const vpHeeftPrijs = (r) => typeof r.prijs === "number" && Number.isFinite(r.prijs);
+    function vpStatus(t) { document.getElementById("vp-status").textContent = t; }
+
+    function vpTotalen() {
+      let ingevuld = 0, o26 = 0, o3 = 0;
+      for (const r of vpRijen) if (vpHeeftPrijs(r)) { ingevuld++; o26 += (r.tot2026 || 0) * r.prijs; o3 += vpTot3(r) * r.prijs; }
+      document.getElementById("vp-aantal").textContent = vpRijen.length;
+      document.getElementById("vp-ingevuld").textContent = `${ingevuld} / ${vpRijen.length}`;
+      document.getElementById("vp-omzet26").textContent = euro(o26);
+      document.getElementById("vp-omzet3j").textContent = euro(o3);
+      document.getElementById("vp-teller").textContent = vpRijen.length ? `· ${vpRijen.length} producten` : "";
+    }
+
+    // Apotheekprijs = AP per eenheid van het vaste recept waarvan het CNK overeenkomt (zelfde formule als in de receptenlijst).
+    function vpApotheekprijs(cnk) {
+      const recept = (laatsteRecepten || []).find((x) => x.cnk && String(x.cnk) === String(cnk));
+      if (!recept) return null;
+      const ingr = recept.ingredienten.map((i) => pasKoppelingToe({ ...i }));
+      const ap = berekenAP(recept.aantalVerkoopeenheden, ingr, recept.extraKosten || [], { capsules: recept.soort === "capsules", aantalGelules: recept.aantalGelules || 0 });
+      return { ap, naam: recept.naam };
+    }
+
+    function vpOmzetCellen(tr, r) {
+      const [c26, c3] = tr.querySelectorAll(".vp-omzet");
+      c26.textContent = vpHeeftPrijs(r) ? euro((r.tot2026 || 0) * r.prijs) : "—";
+      c3.textContent = vpHeeftPrijs(r) ? euro(vpTot3(r) * r.prijs) : "—";
+    }
+
+    function vpTeken() {
+      const body = document.getElementById("vp-body");
+      body.innerHTML = "";
+      document.getElementById("vp-leeg").style.display = vpRijen.length ? "none" : "block";
+      document.getElementById("vp-wrap").style.display = vpRijen.length ? "block" : "none";
+      vpRijen.forEach((r, i) => {
+        const tr = document.createElement("tr");
+        tr.dataset.zoek = `${r.naam} ${r.cnk}`.toLowerCase();
+        tr.innerHTML = `<td></td><td><span class="vp-naam"></span><br><span style="color:#888; font-size:0.72rem;" class="vp-cnk"></span></td>
+          <td><input class="vp-prijs" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,00" /></td>
+          <td class="vp-ap"></td><td></td><td></td><td></td><td></td><td></td><td class="vp-omzet"></td><td class="vp-omzet"></td>`;
+        const td = tr.querySelectorAll("td");
+        td[0].textContent = i + 1;
+        tr.querySelector(".vp-naam").textContent = r.naam;
+        tr.querySelector(".vp-cnk").textContent = "CNK " + r.cnk;
+        const inp = tr.querySelector(".vp-prijs");
+        if (vpHeeftPrijs(r)) { inp.value = r.prijs; inp.classList.add("ingevuld"); }
+        [r.voorraad, r.tot2026, r.tot2025, r.tot2024, vpTot3(r)].forEach((w, k) => { td[4 + k].textContent = (w || 0).toLocaleString("nl-BE"); });
+        const apCel = tr.querySelector(".vp-ap");
+        const ap = vpApotheekprijs(r.cnk);
+        if (ap) { apCel.textContent = euro(ap.ap); apCel.title = "Recept: " + ap.naam; } else { apCel.textContent = "—"; apCel.title = "Geen vast recept met dit CNK"; }
+        vpOmzetCellen(tr, r);
+        inp.addEventListener("input", () => {
+          const ruw = inp.value.trim().replace(",", ".");
+          const v = ruw === "" ? null : parseFloat(ruw);
+          r.prijs = v === null || Number.isNaN(v) ? null : v;
+          inp.classList.toggle("ingevuld", r.prijs !== null);
+          vpOmzetCellen(tr, r); vpTotalen();
+          clearTimeout(vpTimers[r.cnk]);
+          vpTimers[r.cnk] = setTimeout(async () => {
+            try {
+              const res = await apiFetch(`${API}?resource=verkoopprijzen&cnk=${encodeURIComponent(r.cnk)}`, {
+                method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prijs: r.prijs }),
+              });
+              if (!res.ok) throw new Error(await res.text());
+              vpStatus("Opgeslagen."); setTimeout(() => vpStatus(""), 1500);
+            } catch (err) { vpStatus("Opslaan mislukt: " + err.message); }
+          }, 500);
+        });
+        body.appendChild(tr);
+      });
+      vpTotalen();
+      vpFilter();
+    }
+
+    function vpFilter() {
+      const q = document.getElementById("vp-zoek").value.trim().toLowerCase();
+      document.querySelectorAll("#vp-body tr").forEach((tr) => { tr.hidden = q !== "" && !tr.dataset.zoek.includes(q); });
+    }
+
+    async function laadVerkoopprijzen() {
+      vpStatus("Laden…");
+      try {
+        const res = await apiFetch(`${API}?resource=verkoopprijzen&_=${Date.now()}`);
+        if (!res.ok) throw new Error(await res.text());
+        vpRijen = (await res.json()).lijst || [];
+        vpRijen.sort((a, b) => vpTot3(b) - vpTot3(a));
+        vpGeladen = true;
+        vpTeken(); vpStatus("");
+      } catch (err) { vpStatus("Fout bij laden: " + err.message); }
+    }
+
+    // Leest het verkoophistoriek-exportformaat (kolom 1 = CNK, kolom 3 = omschrijving, kolom 10 = voorraad,
+    // daarna per jaarrij: jaartal, 12 maandkolommen en een totaalkolom).
+    function parseVerkoophistoriekCsv(tekst) {
+      const producten = {};
+      let huidig = null;
+      for (const lijn of tekst.split(/\r?\n/)) {
+        const k = lijn.split(";");
+        if (k.length < 14) continue;
+        const cnk = k[0].trim();
+        const omschrijving = k[2] ? k[2].trim() : "";
+        const voorraad = k[9] ? k[9].trim() : "";
+        if (/^\d{6,7}$/.test(cnk) && omschrijving) {
+          huidig = { cnk, naam: omschrijving, voorraad: voorraad === "" ? 0 : parseInt(voorraad, 10) || 0, tot2026: 0, tot2025: 0, tot2024: 0 };
+          producten[cnk] = huidig;
+        }
+        const jaarIdx = k.findIndex((c, i) => i >= 9 && /^(2024|2025|2026)$/.test(c.trim()));
+        if (huidig && jaarIdx !== -1) {
+          const totaal = parseInt(k[jaarIdx + 13] ? k[jaarIdx + 13].trim() : "", 10) || 0;
+          huidig["tot" + k[jaarIdx].trim()] = totaal;
+        }
+      }
+      return Object.values(producten);
+    }
+
+    document.getElementById("verkoopprijzen-sectie").addEventListener("toggle", (e) => { if (e.target.open && !vpGeladen) laadVerkoopprijzen(); });
+    document.getElementById("vp-vernieuw-btn").addEventListener("click", laadVerkoopprijzen);
+    document.getElementById("vp-zoek").addEventListener("input", vpFilter);
+    document.getElementById("vp-import-btn").addEventListener("click", () => document.getElementById("vp-import-file").click());
+    document.getElementById("vp-import-file").addEventListener("change", async (e) => {
+      const bestand = e.target.files[0];
+      if (!bestand) return;
+      try {
+        vpStatus("Bestand wordt gelezen…");
+        const rijen = parseVerkoophistoriekCsv(await bestand.text());
+        if (!rijen.length) { vpStatus("Geen producten gevonden. Controleer het bestandsformaat."); return; }
+        vpStatus(`${rijen.length} producten gevonden, bezig met importeren…`);
+        const res = await apiFetch(`${API}?resource=verkoopprijzen`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rijen) });
+        if (!res.ok) throw new Error(await res.text());
+        const d = await res.json();
+        await laadVerkoopprijzen();
+        vpStatus(`${d.imported} producten geïmporteerd.`);
+      } catch (err) { vpStatus("Import mislukt: " + err.message); }
+      finally { e.target.value = ""; }
+    });
 
     // ---- Login (identiek aan de andere modules, zelfde accounts) ----
     const PIN_LENGTE = 4;
