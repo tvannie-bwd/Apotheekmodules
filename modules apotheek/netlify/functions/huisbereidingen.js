@@ -51,7 +51,11 @@ function maandenOf(m) {
 function soortOf(v) { return v === "capsules" || v === "supplementen" ? v : "normaal"; }
 
 function normaliseerExtraKost(k) {
-  return { naam: k.naam ?? "", bedrag: getalOf(k.bedrag) };
+  const uit = { naam: k.naam ?? "", bedrag: getalOf(k.bedrag) };
+  // verpakking uit de grondstoffenlijst: CNK + aantal stuks per verkoopeenheid (het bedrag wordt in de browser herberekend)
+  if (k.cnk) { uit.cnk = String(k.cnk); uit.aantal = getalOf(k.aantal, 1) > 0 ? getalOf(k.aantal, 1) : 1; }
+  else if (k.verpakking) uit.verpakking = true;
+  return uit;
 }
 
 export default async (req) => {
@@ -114,7 +118,7 @@ export default async (req) => {
           eenheid: String(g.eenheid ?? ""),
           prijs, korting: getalOf(g.korting),
           datum, factuur: "manueel", lot: "",
-          type: ["actief", "hulpstof", "supplement"].includes(g.type) ? g.type : (bestaand?.type ?? "actief"),
+          type: ["actief", "hulpstof", "supplement", "verpakking"].includes(g.type) ? g.type : (bestaand?.type ?? "actief"),
           manueel: true,
           historiek,
         };
@@ -144,7 +148,7 @@ export default async (req) => {
         const record = {
           ...basis,
           cnk: String(l.cnk),
-          naam: isNieuwste || !bestaand ? (l.naam || basis.naam || "") : basis.naam,
+          naam: basis.naamAangepast ? basis.naam : (isNieuwste || !bestaand ? (l.naam || basis.naam || "") : basis.naam),
           btw: isNieuwste ? getalOf(l.btw, 21) : getalOf(basis.btw, 21),
           leverancier: isNieuwste ? (f.leverancier || basis.leverancier || "") : (basis.leverancier || ""),
           omschrijving: isNieuwste ? (l.omschrijving || basis.omschrijving || "") : basis.omschrijving,
@@ -156,7 +160,7 @@ export default async (req) => {
           factuur: isNieuwste ? String(f.nr) : basis.factuur,
           lot: isNieuwste ? (l.lot ?? "") : basis.lot,
           // type blijft wat de gebruiker eerder koos; enkel bij een nieuw product de gok uit de factuur
-          type: bestaand?.type ?? (["hulpstof", "supplement"].includes(l.type) ? l.type : "actief"),
+          type: bestaand?.type ?? (["hulpstof", "supplement", "verpakking"].includes(l.type) ? l.type : "actief"),
           historiek,
         };
         await store.setJSON(key, record);
@@ -174,8 +178,10 @@ export default async (req) => {
       try { body = await req.json(); } catch { return json({ error: "Ongeldige JSON in request body." }, 400); }
       const record = {
         ...bestaand,
-        type: ["actief", "hulpstof", "supplement"].includes(body.type) ? body.type : bestaand.type,
+        type: ["actief", "hulpstof", "supplement", "verpakking"].includes(body.type) ? body.type : bestaand.type,
         naam: typeof body.naam === "string" && body.naam.trim() ? body.naam.trim() : bestaand.naam,
+        // een zelf aangepaste naam wordt niet meer overschreven door een nieuwe factuur
+        naamAangepast: typeof body.naam === "string" && body.naam.trim() ? true : bestaand.naamAangepast,
       };
       await store.setJSON(GRONDSTOF_PREFIX + cnkParam, record);
       return json(record);
