@@ -2,7 +2,7 @@
 // grondstoflijnen. Werkt in de browser (pdf.js-items) en in Node (voor tests).
 // Een "item" is { str, x, y } zoals pdf.js het geeft (x = links, y = onderaan, PDF-coördinaten).
 (function (root) {
-  const VERSIE = "2026-10-11"; // wijzigt telkens de lezer aangepast wordt; staat zichtbaar in de pagina
+  const VERSIE = "2026-10-11c"; // wijzigt telkens de lezer aangepast wordt; staat zichtbaar in de pagina
   const NUM = "-?(?:\\d{1,3}(?: \\d{3})*\\.\\d{2}|\\d+\\.\\d{2})"; // ook negatieve bedragen (bv. een cadeaubon)
   // korting (%) is niet altijd aanwezig op de factuur
   const RIJ = new RegExp("^(.*?)\\s+(\\d+)\\s+(" + NUM + ")\\s+(?:(\\d+(?:\\.\\d+)?)\\s+)?(" + NUM + ")\\s+(\\d+)\\s*$");
@@ -80,8 +80,11 @@
   }
 
   const HULPSTOF = /GELULEN|OMDOOS|CREME|GEL\b|CARBOMEERGEL|BEELERBASIS|VASELINE|PARAFFINE|GLYCEROL|WATER|ROZENWATER|SIROOP|ETHANOL|ISOPROPYL|WOLVET|LANOLINE|CETYLALCOHOL|CITROENZUUR|NATRIUMBENZOAAT|NATRIUMCHLORIDE|NATRIUMBICARBONAAT|MANNITOL|FLACON|ZENTROP|\bFL\b/;
+  // lege gelulen en flacons zijn verpakkingsmateriaal
+  const VERPAKKING = /GELULEN|FLACON|ZENTROP|\bFL\b/;
   function gokType(oms) {
-    return HULPSTOF.test(oms.toUpperCase()) ? "hulpstof" : "actief";
+    const o = oms.toUpperCase();
+    return VERPAKKING.test(o) ? "verpakking" : HULPSTOF.test(o) ? "hulpstof" : "actief";
   }
 
   // pages: array van arrays van items. Geeft { ok, fout, leverancier, factuur, datum, lijnen, totaalFactuur, som, klopt }
@@ -94,7 +97,8 @@
     }
     if (/Magis-Pharma/i.test(tekst) && /Factuur\s+INV\//i.test(tekst)) return parseMagis(regels, tekst);
     if (/PHARMA CHEMICALS/i.test(tekst)) return parsePharmaChemicals(regels, tekst);
-    return { ok: false, fout: "Onbekend factuurformaat (herkend: Pharma Chemicals en Magis-Pharma)." };
+    if (/derco/i.test(tekst) && /FAKTUUR|FACTUUR/i.test(tekst)) return parseDerco(regels, tekst);
+    return { ok: false, fout: "Onbekend factuurformaat (herkend: Pharma Chemicals, Magis-Pharma en Derco verpakkingen)." };
   }
 
   // ---- Magis-Pharma ----
@@ -122,7 +126,7 @@
       l.naam = schoneNaam(oms, true);
       // geschenken (100% korting) en lijnen zonder bedrag worden overgeslagen; 6%-producten zijn geen grondstoffen
       l.gratis = korting >= 100 || totaal === 0;
-      l.type = l.btw === 6 ? "supplement" : HULPSTOF.test(oms.toUpperCase()) ? "hulpstof" : "actief";
+      l.type = l.btw === 6 ? "supplement" : gokType(oms);
       lijnen.push(l);
     }
     const bruikbaar = lijnen.filter((l) => !l.gratis);
@@ -217,7 +221,48 @@
     return { ok: true, leverancier: "Pharma Chemicals", factuur: nr[1], datum, lijnen, totaalFactuur, som, klopt };
   }
 
-  const api = { versie: VERSIE, parseFactuur, parseMagis, leesVerpakking, schoneNaam, gokType, maakRegels };
+  // ---- Derco (verpakkingsmateriaal) ----
+  // Lijn: artikelcode, omschrijving, hoeveelheid, eenheidsprijs (per 1000 stuks), per, [korting %], totaal, btw-letter.
+  // Onderdelen na "Bestaat uit :" hebben prijs 0 en worden overgeslagen.
+  const DERCO = /^([A-Z0-9]{5,})\s+(.+?)\s+(\d+)\s+(\d+,\d{2,4})\s+(\d+)\s+(?:(\d+(?:,\d+)?)\s*%\s+)?(\d[\d.]*,\d{2})\s+([A-Z])\s*$/;
+  function parseDerco(regels, tekst) {
+    const nr = /FA[CK]TUUR\s+(\d{4})\s*[\/-]\s*(\d+)/i.exec(tekst);
+    if (!nr) return { ok: false, fout: "Factuurnummer niet gevonden." };
+    const dm = /FA[CK]TUUR\s+\d{4}\s*[\/-]\s*\d+\s+van\s+(\d{1,2})\s*[\/-]\s*(\d{1,2})\s*[\/-]\s*(\d{4})/i.exec(tekst);
+    const datum = dm ? ddmmjjjjNaarIso(`${dm[1]}-${dm[2]}-${dm[3]}`) : null;
+    if (!datum) return { ok: false, fout: `Factuurdatum niet gevonden (lezer ${VERSIE}).` };
+    const lijnen = [];
+    let laatste = null; // omschrijving loopt soms door op de regel eronder
+    for (const regel of regels) {
+      const m = DERCO.exec(regel);
+      if (m) {
+        laatste = null;
+        const prijs = nl(m[4]), per = parseInt(m[5], 10), aantal = parseInt(m[3], 10);
+        if (!(prijs > 0) || !(per > 0)) continue; // onderdeel van een samengesteld artikel
+        const korting = m[6] ? nl(m[6]) : 0, totaal = nl(m[7]);
+        const l = { cnk: m[1], omschrijving: m[2].replace(/\s+/g, " ").trim(), lot: "", aantal, prijs, korting, totaal, btw: 21, verpakkingsinhoud: per, eenheid: "stuks", type: "verpakking" };
+        lijnen.push(l); laatste = l;
+        continue;
+      }
+      if (laatste && /^[A-Z0-9Ø(][A-Z0-9Ø ,.()+\/-]{0,30}$/.test(regel) && !/BESTAAT|HERINNERING|BETALING|^-+$/.test(regel) && regel.split(/\s+/).length <= 3) {
+        laatste.omschrijving += " " + regel.trim();
+      }
+      laatste = null;
+    }
+    for (const l of lijnen) {
+      const s = l.omschrijving.replace(/\s+/g, " ").trim().toLowerCase();
+      l.naam = s.charAt(0).toUpperCase() + s.slice(1);
+    }
+    const tm = /(?:^|\n)\s*[A-Z]\s+\d+,\d{2}\s*%\s+(\d[\d.]*,\d{2})\s+\d[\d.]*,\d{2}/.exec(tekst);
+    const totaalFactuur = tm ? nl(tm[1]) : null;
+    const som = Math.round(lijnen.reduce((a, l) => a + l.totaal, 0) * 100) / 100;
+    const rekenFout = lijnen.some((l) => Math.abs(l.aantal * l.prijs / l.verpakkingsinhoud * (1 - l.korting / 100) - l.totaal) > 0.02);
+    if (lijnen.length === 0) return { ok: false, fout: "Geen productlijnen gevonden." };
+    const klopt = totaalFactuur !== null && Math.abs(som - totaalFactuur) < 0.011 && !rekenFout;
+    return { ok: true, leverancier: "Derco", factuur: `${nr[1]}-${nr[2]}`, datum, lijnen, totaalFactuur, som, klopt };
+  }
+
+  const api = { versie: VERSIE, parseFactuur, parseMagis, parseDerco, leesVerpakking, schoneNaam, gokType, maakRegels };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.FactuurParser = api;
 })(typeof window !== "undefined" ? window : globalThis);
