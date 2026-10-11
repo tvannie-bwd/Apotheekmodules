@@ -138,6 +138,25 @@
     table.vp-tabel input.vp-prijs { width: 80px; text-align: right; padding: 4px 6px; }
     table.vp-tabel input.vp-prijs.ingevuld { background: #fff4e5; border-color: #d69e2e; }
     @media print { #verkoopprijzen-sectie { display: none !important; } }
+    #rapport-print { display: none; }
+    .rapport h2 { margin: 0 0 2px; font-size: 1.2rem; }
+    .rapport .r-sub { color: #555; font-size: 0.85rem; margin: 0 0 10px; }
+    .rapport table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .rapport td { white-space: nowrap; }
+    .rapport td:first-child { white-space: normal; }
+    .rapport th, .rapport td { padding: 4px 6px; text-align: right; border-bottom: 1px solid #ddd; }
+    .rapport th { font-size: 0.68rem; text-transform: uppercase; color: #555; border-bottom: 2px solid #999; }
+    .rapport th:first-child, .rapport td:first-child { text-align: left; }
+    .rapport tfoot td { font-weight: 700; border-top: 2px solid #999; border-bottom: none; }
+    .rapport .r-tegels { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+    .rapport .r-tegel { border: 1px solid #ccc; border-radius: 6px; padding: 6px 10px; min-width: 130px; }
+    .rapport .r-tegel span { display: block; font-size: 0.68rem; text-transform: uppercase; color: #666; }
+    .rapport .r-tegel strong { font-size: 1.05rem; }
+    .rapport .r-noot { font-size: 0.75rem; color: #666; margin-top: 8px; }
+    @media print {
+      body.rapport-printen > *:not(#rapport-print) { display: none !important; }
+      body.rapport-printen #rapport-print { display: block !important; }
+    }
     details.facturen { border: 1px solid #ddd; border-radius: 8px; padding: 8px 12px; margin-bottom: 16px; background: #fafafa; }
     details.facturen > summary { cursor: pointer; font-weight: 600; }
     .fact-blok { border: 1px solid #ddd; border-radius: 6px; padding: 6px 10px; margin: 8px 0; background: #fff; }
@@ -320,14 +339,44 @@
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
       <input type="search" id="vp-zoek" placeholder="Zoek product of CNK-code…" autocomplete="off" style="flex:1 1 200px; width:auto;" />
       <button class="klein" id="vp-import-btn" type="button">CSV importeren</button>
+      <button class="klein" id="vp-nieuw-btn" type="button">+ Product toevoegen</button>
       <input type="file" id="vp-import-file" accept=".csv,text/csv" style="display:none; width:auto;" />
       <button class="klein" id="vp-vernieuw-btn" type="button">Vernieuwen</button>
+    </div>
+    <div id="vp-nieuw" style="display:none; border:1px solid #ddd; border-radius:6px; padding:10px; margin-bottom:8px; background:white;">
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:8px; align-items:end;">
+        <div style="grid-column: span 2;"><label for="vp-n-naam">Productnaam</label><input id="vp-n-naam" type="text" placeholder="bv. EB Zonnecrème" /></div>
+        <div><label for="vp-n-cnk">CNK</label><input id="vp-n-cnk" type="text" inputmode="numeric" placeholder="bv. 1234567" /></div>
+        <div><label for="vp-n-prijs">Verkoopprijs</label><input id="vp-n-prijs" type="number" step="0.01" min="0" placeholder="0.00" /></div>
+        <div><label for="vp-n-voorraad">Voorraad</label><input id="vp-n-voorraad" type="number" step="1" min="0" placeholder="0" /></div>
+        <div><label for="vp-n-2026">Verkocht 2026</label><input id="vp-n-2026" type="number" step="1" min="0" placeholder="0" /></div>
+        <div><label for="vp-n-2025">Verkocht 2025</label><input id="vp-n-2025" type="number" step="1" min="0" placeholder="0" /></div>
+        <div><label for="vp-n-2024">Verkocht 2024</label><input id="vp-n-2024" type="number" step="1" min="0" placeholder="0" /></div>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button class="primary klein" id="vp-n-opslaan" type="button">Product opslaan</button>
+        <button class="klein" id="vp-n-annuleer" type="button">Annuleren</button>
+      </div>
+    </div>
+    <div id="vp-rapport-balk" style="border:1px solid #ddd; border-radius:6px; padding:10px; margin-bottom:8px; background:white;">
+      <strong style="font-size:0.9rem;">Financieel rapport</strong>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:end; margin-top:6px;">
+        <div style="flex:0 1 180px;"><label for="vp-r-periode">Periode</label>
+          <select id="vp-r-periode"><option value="2026">Jaar 2026</option><option value="2025">Jaar 2025</option><option value="2024">Jaar 2024</option><option value="eigen">Eigen periode…</option></select></div>
+        <div id="vp-r-eigen" style="display:none; gap:8px; flex-wrap:wrap;">
+          <div><label for="vp-r-van">Van (maand)</label><input id="vp-r-van" type="month" min="2024-01" max="2026-12" value="2026-01" /></div>
+          <div><label for="vp-r-tot">Tot en met (maand)</label><input id="vp-r-tot" type="month" min="2024-01" max="2026-12" value="2026-12" /></div>
+        </div>
+        <button class="klein" id="vp-r-toon" type="button">Rapport tonen</button>
+        <button class="primary klein" id="vp-r-print" type="button">Rapport afdrukken</button>
+      </div>
+      <div id="vp-r-voorbeeld" style="margin-top:10px; overflow-x:auto;"></div>
     </div>
     <p id="vp-status" style="font-size:0.8rem; color:#777; min-height:1.1em; margin:0 0 6px;"></p>
     <p class="empty" id="vp-leeg" style="display:none;">Nog geen producten. Importeer een CSV met de verkoophistoriek.</p>
     <div class="vp-wrap" id="vp-wrap" style="display:none;">
       <table class="vp-tabel">
-        <thead><tr><th>#</th><th>Product</th><th>Verkoopprijs</th><th title="Aankoopprijs (AP) per eenheid van het vaste recept met dit CNK">Apotheekprijs</th><th>Voorraad</th><th>2026 (YTD)</th><th>2025</th><th>2024</th><th>Totaal 3j</th><th>Omzet 2026</th><th>Omzet 3j</th></tr></thead>
+        <thead><tr><th>#</th><th>Product</th><th>Verkoopprijs</th><th title="Aankoopprijs (AP) per eenheid van het vaste recept met dit CNK">Apotheekprijs</th><th>Voorraad</th><th>2026 (YTD)</th><th>2025</th><th>2024</th><th>Totaal 3j</th><th>Omzet 2026</th><th>Omzet 3j</th><th></th></tr></thead>
         <tbody id="vp-body"></tbody>
       </table>
     </div>
@@ -1068,7 +1117,7 @@
         tr.dataset.zoek = `${r.naam} ${r.cnk}`.toLowerCase();
         tr.innerHTML = `<td></td><td><span class="vp-naam"></span><br><span style="color:#888; font-size:0.72rem;" class="vp-cnk"></span></td>
           <td><input class="vp-prijs" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,00" /></td>
-          <td class="vp-ap"></td><td></td><td></td><td></td><td></td><td></td><td class="vp-omzet"></td><td class="vp-omzet"></td>`;
+          <td class="vp-ap"></td><td></td><td></td><td></td><td></td><td></td><td class="vp-omzet"></td><td class="vp-omzet"></td><td><button class="klein danger vp-del" type="button" title="Verwijderen">×</button></td>`;
         const td = tr.querySelectorAll("td");
         td[0].textContent = i + 1;
         tr.querySelector(".vp-naam").textContent = r.naam;
@@ -1080,6 +1129,14 @@
         const ap = vpApotheekprijs(r.cnk);
         if (ap) { apCel.textContent = euro(ap.ap); apCel.title = "Recept: " + ap.naam; } else { apCel.textContent = "—"; apCel.title = "Geen vast recept met dit CNK"; }
         vpOmzetCellen(tr, r);
+        bevestigKlik(tr.querySelector(".vp-del"), async () => {
+          try {
+            const res = await apiFetch(`${API}?resource=verkoopprijzen&cnk=${encodeURIComponent(r.cnk)}`, { method: "DELETE" });
+            if (!res.ok) throw new Error(await res.text());
+            vpRijen = vpRijen.filter((x) => x.cnk !== r.cnk);
+            vpTeken(); vpStatus("Product verwijderd.");
+          } catch (err) { vpStatus("Verwijderen mislukt: " + err.message); }
+        });
         inp.addEventListener("input", () => {
           const ruw = inp.value.trim().replace(",", ".");
           const v = ruw === "" ? null : parseFloat(ruw);
@@ -1132,19 +1189,154 @@
         const omschrijving = k[2] ? k[2].trim() : "";
         const voorraad = k[9] ? k[9].trim() : "";
         if (/^\d{6,7}$/.test(cnk) && omschrijving) {
-          huidig = { cnk, naam: omschrijving, voorraad: voorraad === "" ? 0 : parseInt(voorraad, 10) || 0, tot2026: 0, tot2025: 0, tot2024: 0 };
+          huidig = { cnk, naam: omschrijving, voorraad: voorraad === "" ? 0 : parseInt(voorraad, 10) || 0, tot2026: 0, tot2025: 0, tot2024: 0, maanden: {} };
           producten[cnk] = huidig;
         }
         const jaarIdx = k.findIndex((c, i) => i >= 9 && /^(2024|2025|2026)$/.test(c.trim()));
         if (huidig && jaarIdx !== -1) {
           const totaal = parseInt(k[jaarIdx + 13] ? k[jaarIdx + 13].trim() : "", 10) || 0;
           huidig["tot" + k[jaarIdx].trim()] = totaal;
+          huidig.maanden[k[jaarIdx].trim()] = k.slice(jaarIdx + 1, jaarIdx + 13).map((x) => parseInt(x.trim(), 10) || 0);
         }
       }
       return Object.values(producten);
     }
 
     document.getElementById("verkoopprijzen-sectie").addEventListener("toggle", (e) => { if (e.target.open && !vpGeladen) laadVerkoopprijzen(); });
+
+    // ---- Financieel rapport (per jaar of eigen periode) ----
+    const MAANDNAMEN = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
+    const escHtml = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+    function rapportPeriode() {
+      const keuze = document.getElementById("vp-r-periode").value;
+      if (keuze !== "eigen") return { van: [Number(keuze), 1], tot: [Number(keuze), 12], tekst: `Jaar ${keuze}` };
+      const lees = (id) => { const m = document.getElementById(id).value.match(/^(\d{4})-(\d{2})$/); return m ? [Number(m[1]), Number(m[2])] : null; };
+      const van = lees("vp-r-van"), tot = lees("vp-r-tot");
+      if (!van || !tot) return { fout: "Kies een begin- en eindmaand." };
+      if (van[0] * 12 + van[1] > tot[0] * 12 + tot[1]) return { fout: "De beginmaand ligt na de eindmaand." };
+      return { van, tot, tekst: `${MAANDNAMEN[van[1] - 1]} ${van[0]} t.e.m. ${MAANDNAMEN[tot[1] - 1]} ${tot[0]}` };
+    }
+
+    // Verkochte aantallen van één product in de periode; jaartotaal enkel als het hele jaar in de periode valt.
+    function aantalInPeriode(r, per) {
+      let aantal = 0, onvolledig = false;
+      for (let jaar = per.van[0]; jaar <= per.tot[0]; jaar++) {
+        const m1 = jaar === per.van[0] ? per.van[1] : 1;
+        const m2 = jaar === per.tot[0] ? per.tot[1] : 12;
+        const maanden = r.maanden && r.maanden[jaar];
+        if (maanden) { for (let m = m1; m <= m2; m++) aantal += maanden[m - 1] || 0; }
+        else if (m1 === 1 && m2 === 12) aantal += r["tot" + jaar] || 0;
+        else if (r["tot" + jaar]) onvolledig = true;
+      }
+      return { aantal, onvolledig };
+    }
+
+    function bouwRapport() {
+      const per = rapportPeriode();
+      if (per.fout) return { fout: per.fout };
+      let rijen = vpRijen.map((r) => {
+        const { aantal, onvolledig } = aantalInPeriode(r, per);
+        const ap = vpApotheekprijs(r.cnk);
+        const heeftPP = vpHeeftPrijs(r);
+        return {
+          naam: r.naam, cnk: r.cnk, aantal, onvolledig, pp: heeftPP ? r.prijs : null,
+          omzetIncl: heeftPP ? aantal * r.prijs : null,
+          omzetExcl: heeftPP ? aantal * exclBtwVerkoop(r.prijs) : null,
+          apPer: ap ? ap.ap : null,
+          kost: ap ? aantal * ap.ap : null,
+        };
+      }).filter((x) => x.aantal > 0 || x.onvolledig);
+      for (const x of rijen) x.winst = x.omzetExcl !== null && x.kost !== null ? x.omzetExcl - x.kost : null;
+      rijen.sort((a, b) => (b.omzetIncl ?? -1) - (a.omzetIncl ?? -1) || b.aantal - a.aantal);
+
+      const som = (veld, enkelVolledig) => rijen.filter((x) => !enkelVolledig || x.winst !== null).reduce((t, x) => t + (x[veld] || 0), 0);
+      const totAantal = som("aantal");
+      const totIncl = som("omzetIncl"), totExcl = som("omzetExcl");
+      const winstRijen = rijen.filter((x) => x.winst !== null);
+      const totWinst = winstRijen.reduce((t, x) => t + x.winst, 0);
+      const totKost = winstRijen.reduce((t, x) => t + x.kost, 0);
+      const zonderPP = rijen.filter((x) => x.pp === null).length;
+      const zonderAP = rijen.filter((x) => x.apPer === null).length;
+      const onvolledig = rijen.filter((x) => x.onvolledig).length;
+      const apotheek = localStorage.getItem("magistraal-apotheeknaam") || "";
+      const nu = new Date().toLocaleDateString("nl-BE");
+      const bedrag = (v) => (v === null ? "—" : euro(v));
+
+      let html = `<h2>Financieel rapport huisbereidingen</h2>
+        <p class="r-sub">${apotheek ? escHtml(apotheek) + " · " : ""}Periode: <strong>${escHtml(per.tekst)}</strong> · opgemaakt op ${nu}</p>
+        <div class="r-tegels">
+          <div class="r-tegel"><span>Verkocht (stuks)</span><strong>${totAantal.toLocaleString("nl-BE")}</strong></div>
+          <div class="r-tegel"><span>Omzet incl. 6% BTW</span><strong>${euro(totIncl)}</strong></div>
+          <div class="r-tegel"><span>Omzet excl. BTW</span><strong>${euro(totExcl)}</strong></div>
+          <div class="r-tegel"><span>Aankoopkost (AP)</span><strong>${euro(totKost)}</strong></div>
+          <div class="r-tegel"><span>Winst</span><strong>${euro(totWinst)}</strong></div>
+        </div>`;
+      if (!rijen.length) {
+        html += `<p>Geen verkopen gevonden in deze periode.${vpRijen.length ? "" : " Importeer eerst een CSV met de verkoophistoriek."}</p>`;
+      } else {
+        html += `<table><thead><tr><th>Product</th><th>CNK</th><th>Aantal</th><th>Verkoopprijs</th><th>Omzet incl. BTW</th><th>Omzet excl. BTW</th><th>AP per eenheid</th><th>Aankoopkost</th><th>Winst</th></tr></thead><tbody>`;
+        for (const x of rijen) {
+          html += `<tr><td>${escHtml(x.naam)}${x.onvolledig ? " *" : ""}</td><td>${escHtml(x.cnk)}</td><td>${x.aantal.toLocaleString("nl-BE")}</td><td>${bedrag(x.pp)}</td><td>${bedrag(x.omzetIncl)}</td><td>${bedrag(x.omzetExcl)}</td><td>${bedrag(x.apPer)}</td><td>${bedrag(x.kost)}</td><td>${bedrag(x.winst)}</td></tr>`;
+        }
+        html += `</tbody><tfoot><tr><td>Totaal</td><td></td><td>${totAantal.toLocaleString("nl-BE")}</td><td></td><td>${euro(totIncl)}</td><td>${euro(totExcl)}</td><td></td><td>${euro(totKost)}</td><td>${euro(totWinst)}</td></tr></tfoot></table>`;
+      }
+      const noten = [`Berekend met de huidige verkoopprijzen (incl. 6% BTW) en de huidige aankoopprijzen van de vaste recepten; winst = omzet excl. BTW − aankoopkost.`];
+      if (zonderPP) noten.push(`${zonderPP} product(en) zonder verkoopprijs: geen omzet berekend.`);
+      if (zonderAP) noten.push(`${zonderAP} product(en) zonder gekoppeld vast recept (CNK): geen aankoopkost en winst; deze zitten niet in de totalen van aankoopkost en winst.`);
+      if (onvolledig) noten.push(`* Voor ${onvolledig} product(en) is enkel een jaartotaal beschikbaar en geen verkoop per maand; die verkoop is niet meegeteld voor deze periode. Importeer de CSV opnieuw om de maandgegevens te laden.`);
+      html += `<p class="r-noot">${noten.map(escHtml).join("<br>")}</p>`;
+      return { html };
+    }
+
+    document.getElementById("vp-r-periode").addEventListener("change", (e) => {
+      document.getElementById("vp-r-eigen").style.display = e.target.value === "eigen" ? "flex" : "none";
+    });
+    document.getElementById("vp-r-toon").addEventListener("click", () => {
+      const r = bouwRapport();
+      const doel = document.getElementById("vp-r-voorbeeld");
+      if (r.fout) { doel.innerHTML = ""; vpStatus(r.fout); return; }
+      vpStatus("");
+      doel.innerHTML = `<div class="rapport">${r.html}</div>`;
+    });
+    document.getElementById("vp-r-print").addEventListener("click", () => {
+      const r = bouwRapport();
+      if (r.fout) { vpStatus(r.fout); return; }
+      document.getElementById("rapport-print").innerHTML = r.html;
+      document.body.classList.add("rapport-printen");
+      window.addEventListener("afterprint", () => document.body.classList.remove("rapport-printen"), { once: true });
+      window.print();
+    });
+    const vpNieuwVelden = ["naam", "cnk", "prijs", "voorraad", "2026", "2025", "2024"];
+    function vpNieuwSluiten() {
+      document.getElementById("vp-nieuw").style.display = "none";
+      for (const v of vpNieuwVelden) document.getElementById("vp-n-" + v).value = "";
+    }
+    document.getElementById("vp-nieuw-btn").addEventListener("click", () => {
+      const f = document.getElementById("vp-nieuw");
+      f.style.display = f.style.display === "none" ? "block" : "none";
+      if (f.style.display === "block") document.getElementById("vp-n-naam").focus();
+    });
+    document.getElementById("vp-n-annuleer").addEventListener("click", vpNieuwSluiten);
+    document.getElementById("vp-n-opslaan").addEventListener("click", async () => {
+      const w = (v) => document.getElementById("vp-n-" + v).value.trim();
+      const getal = (v) => Number(w(v).replace(",", ".")) || 0;
+      const cnk = w("cnk").replace(/[^0-9A-Za-z_-]/g, "");
+      if (!w("naam") || !cnk) { vpStatus("Productnaam en CNK zijn verplicht."); return; }
+      const bestaat = vpRijen.some((r) => r.cnk === cnk);
+      if (bestaat && !confirm("Dit CNK bestaat al in de lijst. Gegevens bijwerken?")) return;
+      const rij = { cnk, naam: w("naam"), voorraad: getal("voorraad"), tot2026: getal("2026"), tot2025: getal("2025"), tot2024: getal("2024") };
+      if (w("prijs") !== "") rij.prijs = getal("prijs");
+      if (bestaat) rij.maanden = null; // jaartotalen manueel aangepast: maandgegevens zijn niet meer betrouwbaar
+      try {
+        vpStatus("Bezig met opslaan…");
+        const res = await apiFetch(`${API}?resource=verkoopprijzen`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify([rij]) });
+        if (!res.ok) throw new Error(await res.text());
+        vpNieuwSluiten();
+        await laadVerkoopprijzen();
+        vpStatus("Product opgeslagen.");
+      } catch (err) { vpStatus("Opslaan mislukt: " + err.message); }
+    });
     document.getElementById("vp-vernieuw-btn").addEventListener("click", laadVerkoopprijzen);
     document.getElementById("vp-zoek").addEventListener("input", vpFilter);
     document.getElementById("vp-import-btn").addEventListener("click", () => document.getElementById("vp-import-file").click());
@@ -1291,6 +1483,8 @@
       toonLoginOverlay(true);
     }
   </script>
+
+  <div id="rapport-print" class="rapport"></div>
 
   <footer class="maker-balk">Gemaakt door Apr. Vannieuwenhuyse Thomas</footer>
 </body>
