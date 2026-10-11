@@ -210,7 +210,7 @@
 
   <details class="facturen" id="facturen-sectie">
     <summary>📄 Facturen &amp; grondstofprijzen <span id="gs-teller" style="font-weight:normal; font-size:0.8rem; color:#777;"></span></summary>
-    <p class="uitleg" style="font-size:0.85rem; color:#666;">Upload facturen van Pharma Chemicals of Magis-Pharma (PDF). Het programma leest de grondstoffen met aankoopprijs en korting uit. Daarna kies je een grondstof in een bereiding en vult de prijs zich automatisch in, telkens met de recentste factuur. Voorlopig enkel de actieve stoffen; hulpstoffen en verpakkingen worden wel bewaard.</p>
+    <p class="uitleg" style="font-size:0.85rem; color:#666;">Upload facturen van Pharma Chemicals of Magis-Pharma (PDF). Het programma leest de grondstoffen met aankoopprijs en korting uit. Daarna kies je een grondstof in een bereiding en vult de prijs zich automatisch in, telkens met de recentste factuur. Actieve stoffen, supplementen en hulpstoffen/verpakkingen worden bewaard; het type kan je hieronder aanpassen. <span style="color:#999;">Lezer-versie: <span id="parser-versie">onbekend</span></span></p>
     <input id="factuur-input" type="file" accept="application/pdf,.pdf" multiple />
     <div id="factuur-voorbeeld"></div>
     <div id="factuur-acties" style="display:none; margin:6px 0;">
@@ -401,7 +401,7 @@
     </div>
   </details>
 
-  <script src="/factuur-parser.js"></script>
+  <script src="/factuur-parser.js?v=20261011"></script>
   <script>
     const API = "/api/huisbereidingen";
     const status = document.getElementById("status");
@@ -800,6 +800,7 @@
     document.getElementById("gs-filter").addEventListener("change", tekenGrondstoffen);
     document.getElementById("gs-zoek").addEventListener("input", tekenGrondstoffen);
 
+    document.getElementById("parser-versie").textContent = (window.FactuurParser && FactuurParser.versie) || "oud (factuur-parser.js niet bijgewerkt of uit cache)";
     // ---- Facturen uploaden ----
     let voorbeeld = []; // { bestand, res, alIngelezen, dubbelInSelectie }
 
