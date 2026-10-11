@@ -37,6 +37,16 @@ function normaliseerIngredient(i) {
   };
 }
 
+// Verkoop per maand: { "2026": [12 getallen], ... } — nodig voor rapporten over een zelfgekozen periode.
+function maandenOf(m) {
+  if (!m || typeof m !== "object") return null;
+  const uit = {};
+  for (const [jaar, rij] of Object.entries(m)) {
+    if (/^\d{4}$/.test(jaar) && Array.isArray(rij) && rij.length === 12) uit[jaar] = rij.map((x) => getalOf(x));
+  }
+  return Object.keys(uit).length ? uit : null;
+}
+
 function normaliseerExtraKost(k) {
   return { naam: k.naam ?? "", bedrag: getalOf(k.bedrag) };
 }
@@ -175,7 +185,8 @@ export default async (req) => {
           tot2026: getalOf(r.tot2026, getalOf(bestaand.tot2026)),
           tot2025: getalOf(r.tot2025, getalOf(bestaand.tot2025)),
           tot2024: getalOf(r.tot2024, getalOf(bestaand.tot2024)),
-          prijs: bestaand.prijs ?? null,
+          maanden: r.maanden === null ? null : (maandenOf(r.maanden) ?? bestaand.maanden ?? null),
+          prijs: r.prijs !== undefined && r.prijs !== null && r.prijs !== "" ? getalOf(r.prijs, bestaand.prijs ?? null) : (bestaand.prijs ?? null),
           bijgewerkt: new Date().toISOString(),
         });
         geimporteerd++;
