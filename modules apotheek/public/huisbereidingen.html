@@ -348,7 +348,6 @@
         <div style="grid-column: span 2;"><label for="vp-n-naam">Productnaam</label><input id="vp-n-naam" type="text" placeholder="bv. EB Zonnecrème" /></div>
         <div><label for="vp-n-cnk">CNK</label><input id="vp-n-cnk" type="text" inputmode="numeric" placeholder="bv. 1234567" /></div>
         <div><label for="vp-n-prijs">Verkoopprijs</label><input id="vp-n-prijs" type="number" step="0.01" min="0" placeholder="0.00" /></div>
-        <div><label for="vp-n-voorraad">Voorraad</label><input id="vp-n-voorraad" type="number" step="1" min="0" placeholder="0" /></div>
         <div><label for="vp-n-2026">Verkocht 2026</label><input id="vp-n-2026" type="number" step="1" min="0" placeholder="0" /></div>
         <div><label for="vp-n-2025">Verkocht 2025</label><input id="vp-n-2025" type="number" step="1" min="0" placeholder="0" /></div>
         <div><label for="vp-n-2024">Verkocht 2024</label><input id="vp-n-2024" type="number" step="1" min="0" placeholder="0" /></div>
@@ -376,7 +375,7 @@
     <p class="empty" id="vp-leeg" style="display:none;">Nog geen producten. Importeer een CSV met de verkoophistoriek.</p>
     <div class="vp-wrap" id="vp-wrap" style="display:none;">
       <table class="vp-tabel">
-        <thead><tr><th>#</th><th>Product</th><th>Verkoopprijs</th><th title="Aankoopprijs (AP) per eenheid van het vaste recept met dit CNK">Apotheekprijs</th><th>Voorraad</th><th>2026 (YTD)</th><th>2025</th><th>2024</th><th>Totaal 3j</th><th>Omzet 2026</th><th>Omzet 3j</th><th></th></tr></thead>
+        <thead><tr><th>#</th><th>Product</th><th>Verkoopprijs</th><th title="Aankoopprijs (AP) per eenheid van het vaste recept met dit CNK">Apotheekprijs</th><th>2026 (YTD)</th><th>2025</th><th>2024</th><th>Totaal 3j</th><th>Omzet 2026</th><th>Omzet 3j</th><th></th></tr></thead>
         <tbody id="vp-body"></tbody>
       </table>
     </div>
@@ -1117,14 +1116,14 @@
         tr.dataset.zoek = `${r.naam} ${r.cnk}`.toLowerCase();
         tr.innerHTML = `<td></td><td><span class="vp-naam"></span><br><span style="color:#888; font-size:0.72rem;" class="vp-cnk"></span></td>
           <td><input class="vp-prijs" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,00" /></td>
-          <td class="vp-ap"></td><td></td><td></td><td></td><td></td><td></td><td class="vp-omzet"></td><td class="vp-omzet"></td><td><button class="klein danger vp-del" type="button" title="Verwijderen">×</button></td>`;
+          <td class="vp-ap"></td><td></td><td></td><td></td><td></td><td class="vp-omzet"></td><td class="vp-omzet"></td><td><button class="klein danger vp-del" type="button" title="Verwijderen">×</button></td>`;
         const td = tr.querySelectorAll("td");
         td[0].textContent = i + 1;
         tr.querySelector(".vp-naam").textContent = r.naam;
         tr.querySelector(".vp-cnk").textContent = "CNK " + r.cnk;
         const inp = tr.querySelector(".vp-prijs");
         if (vpHeeftPrijs(r)) { inp.value = r.prijs; inp.classList.add("ingevuld"); }
-        [r.voorraad, r.tot2026, r.tot2025, r.tot2024, vpTot3(r)].forEach((w, k) => { td[4 + k].textContent = (w || 0).toLocaleString("nl-BE"); });
+        [r.tot2026, r.tot2025, r.tot2024, vpTot3(r)].forEach((w, k) => { td[4 + k].textContent = (w || 0).toLocaleString("nl-BE"); });
         const apCel = tr.querySelector(".vp-ap");
         const ap = vpApotheekprijs(r.cnk);
         if (ap) { apCel.textContent = euro(ap.ap); apCel.title = "Recept: " + ap.naam; } else { apCel.textContent = "—"; apCel.title = "Geen vast recept met dit CNK"; }
@@ -1177,29 +1176,43 @@
       } catch (err) { vpStatus("Fout bij laden: " + err.message); }
     }
 
-    // Leest het verkoophistoriek-exportformaat (kolom 1 = CNK, kolom 3 = omschrijving, kolom 10 = voorraad,
-    // daarna per jaarrij: jaartal, 12 maandkolommen en een totaalkolom).
+    // Leest de export "Verkoophistoriek (M/J)": per product een regel met CNK, naam, jaar, 12 maanden en totaal,
+    // gevolgd door regels voor de andere jaren. De kolompositie verschilt per pagina van de export en bij een
+    // paginabreuk wordt het product herhaald; daarom zoeken we per regel de jaarkolom (jaar + 12 maanden + totaal)
+    // in plaats van vaste kolommen te gebruiken.
     function parseVerkoophistoriekCsv(tekst) {
       const producten = {};
       let huidig = null;
+      const isInt = (x) => /^-?\d+$/.test((x || "").trim());
       for (const lijn of tekst.split(/\r?\n/)) {
-        const k = lijn.split(";");
-        if (k.length < 14) continue;
-        const cnk = k[0].trim();
-        const omschrijving = k[2] ? k[2].trim() : "";
-        const voorraad = k[9] ? k[9].trim() : "";
-        if (/^\d{6,7}$/.test(cnk) && omschrijving) {
-          huidig = { cnk, naam: omschrijving, voorraad: voorraad === "" ? 0 : parseInt(voorraad, 10) || 0, tot2026: 0, tot2025: 0, tot2024: 0, maanden: {} };
-          producten[cnk] = huidig;
+        const k = lijn.split(";").map((c) => c.trim());
+        if (k.length < 15) continue;
+        const cnk = k[0];
+        if (/^\d{6,7}$/.test(cnk)) {
+          const naam = [k[1], k[2], k[3]].find((c) => c && !/^[-\d.,]+$/.test(c)) || "";
+          if (naam) {
+            if (!producten[cnk]) producten[cnk] = { cnk, naam, voorraad: 0, tot2026: 0, tot2025: 0, tot2024: 0, maanden: {} };
+            huidig = producten[cnk];
+          }
         }
-        const jaarIdx = k.findIndex((c, i) => i >= 9 && /^(2024|2025|2026)$/.test(c.trim()));
-        if (huidig && jaarIdx !== -1) {
-          const totaal = parseInt(k[jaarIdx + 13] ? k[jaarIdx + 13].trim() : "", 10) || 0;
-          huidig["tot" + k[jaarIdx].trim()] = totaal;
-          huidig.maanden[k[jaarIdx].trim()] = k.slice(jaarIdx + 1, jaarIdx + 13).map((x) => parseInt(x.trim(), 10) || 0);
+        if (!huidig) continue;
+        // jaarkolom: 2024-2026, gevolgd door 12 maandwaarden en een totaal; liefst met totaal = som van de maanden
+        let gekozen = -1;
+        for (let i = 4; i + 13 < k.length; i++) {
+          if (!/^(2024|2025|2026)$/.test(k[i])) continue;
+          let ok = true;
+          for (let m = 1; m <= 13; m++) if (!isInt(k[i + m])) { ok = false; break; }
+          if (!ok) continue;
+          const som = k.slice(i + 1, i + 13).reduce((t, x) => t + parseInt(x, 10), 0);
+          if (som === parseInt(k[i + 13], 10)) { gekozen = i; break; }
+          if (gekozen === -1) gekozen = i;
         }
+        if (gekozen === -1) continue;
+        const jaar = k[gekozen];
+        huidig.maanden[jaar] = k.slice(gekozen + 1, gekozen + 13).map((x) => parseInt(x, 10));
+        huidig["tot" + jaar] = parseInt(k[gekozen + 13], 10);
       }
-      return Object.values(producten);
+      return Object.values(producten).filter((p) => Object.keys(p.maanden).length);
     }
 
     document.getElementById("verkoopprijzen-sectie").addEventListener("toggle", (e) => { if (e.target.open && !vpGeladen) laadVerkoopprijzen(); });
@@ -1307,7 +1320,7 @@
       window.addEventListener("afterprint", () => document.body.classList.remove("rapport-printen"), { once: true });
       window.print();
     });
-    const vpNieuwVelden = ["naam", "cnk", "prijs", "voorraad", "2026", "2025", "2024"];
+    const vpNieuwVelden = ["naam", "cnk", "prijs", "2026", "2025", "2024"];
     function vpNieuwSluiten() {
       document.getElementById("vp-nieuw").style.display = "none";
       for (const v of vpNieuwVelden) document.getElementById("vp-n-" + v).value = "";
@@ -1325,7 +1338,7 @@
       if (!w("naam") || !cnk) { vpStatus("Productnaam en CNK zijn verplicht."); return; }
       const bestaat = vpRijen.some((r) => r.cnk === cnk);
       if (bestaat && !confirm("Dit CNK bestaat al in de lijst. Gegevens bijwerken?")) return;
-      const rij = { cnk, naam: w("naam"), voorraad: getal("voorraad"), tot2026: getal("2026"), tot2025: getal("2025"), tot2024: getal("2024") };
+      const rij = { cnk, naam: w("naam"), tot2026: getal("2026"), tot2025: getal("2025"), tot2024: getal("2024") };
       if (w("prijs") !== "") rij.prijs = getal("prijs");
       if (bestaat) rij.maanden = null; // jaartotalen manueel aangepast: maandgegevens zijn niet meer betrouwbaar
       try {
