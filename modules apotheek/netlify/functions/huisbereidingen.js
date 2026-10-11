@@ -47,6 +47,9 @@ function maandenOf(m) {
   return Object.keys(uit).length ? uit : null;
 }
 
+// "normaal" = gewone bereiding, "capsules", "supplementen" = grotere verpakking verdeeld in potjes
+function soortOf(v) { return v === "capsules" || v === "supplementen" ? v : "normaal"; }
+
 function normaliseerExtraKost(k) {
   return { naam: k.naam ?? "", bedrag: getalOf(k.bedrag) };
 }
@@ -89,6 +92,35 @@ export default async (req) => {
     if (req.method === "POST") {
       let body;
       try { body = await req.json(); } catch { return json({ error: "Ongeldige JSON in request body." }, 400); }
+      // Manueel toegevoegde (of aangepaste) grondstof, zonder factuur
+      if (body.grondstof) {
+        const g = body.grondstof;
+        const naam = String(g.naam ?? "").trim();
+        const prijs = getalOf(g.prijs);
+        if (!naam || !(prijs > 0)) return json({ error: "Naam en een aankoopprijs groter dan 0 zijn verplicht." }, 400);
+        let cnk = String(g.cnk ?? "").replace(/[^0-9A-Za-z_-]/g, "");
+        if (!cnk) cnk = "MAN-" + Date.now().toString(36).toUpperCase();
+        const key = GRONDSTOF_PREFIX + cnk;
+        const bestaand = await store.get(key, { type: "json" });
+        const datum = new Date().toISOString().slice(0, 10);
+        const punt = { datum, factuur: "manueel", prijs, korting: getalOf(g.korting) };
+        const historiek = [...(bestaand?.historiek ?? []), punt].slice(-12).reverse().filter((h, i, arr) => arr.findIndex((x) => x.datum === h.datum && x.prijs === h.prijs && x.korting === h.korting) === i);
+        const record = {
+          ...(bestaand ?? {}),
+          cnk, naam, omschrijving: naam,
+          btw: getalOf(g.btw, 21),
+          leverancier: String(g.leverancier ?? "").trim(),
+          verpakkingsinhoud: getalOf(g.verpakkingsinhoud, 1) > 0 ? getalOf(g.verpakkingsinhoud, 1) : 1,
+          eenheid: String(g.eenheid ?? ""),
+          prijs, korting: getalOf(g.korting),
+          datum, factuur: "manueel", lot: "",
+          type: ["actief", "hulpstof", "supplement"].includes(g.type) ? g.type : (bestaand?.type ?? "actief"),
+          manueel: true,
+          historiek,
+        };
+        await store.setJSON(key, record);
+        return json(record, bestaand ? 200 : 201);
+      }
       const f = body.factuur;
       if (f && f.nr) f.nr = String(f.nr).replace(/[^\w.-]/g, "-");
       if (!f || !f.nr || !/^\d{4}-\d{2}-\d{2}$/.test(f.datum || "") || !Array.isArray(f.lijnen)) {
@@ -244,7 +276,7 @@ export default async (req) => {
     const recept = {
       id: crypto.randomUUID(),
       naam: body.naam,
-      soort: body.soort === "capsules" ? "capsules" : "normaal",
+      soort: soortOf(body.soort),
       aantalGelules: body.soort === "capsules" ? getalOf(body.aantalGelules) : 0,
       cnk: body.cnk ? String(body.cnk).replace(/[^0-9A-Za-z_-]/g, "") : "",
       eenheidLabel: body.eenheidLabel ?? "",
@@ -273,7 +305,7 @@ export default async (req) => {
     const updated = {
       ...existing,
       naam: body.naam ?? existing.naam,
-      soort: body.soort !== undefined ? (body.soort === "capsules" ? "capsules" : "normaal") : (existing.soort ?? "normaal"),
+      soort: body.soort !== undefined ? soortOf(body.soort) : (existing.soort ?? "normaal"),
       aantalGelules: body.soort !== undefined ? (body.soort === "capsules" ? getalOf(body.aantalGelules) : 0) : (existing.aantalGelules ?? 0),
       cnk: body.cnk !== undefined ? String(body.cnk || "").replace(/[^0-9A-Za-z_-]/g, "") : (existing.cnk ?? ""),
       eenheidLabel: body.eenheidLabel ?? existing.eenheidLabel,
