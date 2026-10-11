@@ -226,6 +226,24 @@
         <option value="hulpstof">Hulpstoffen &amp; verpakkingen</option>
         <option value="alles">Alles</option>
       </select>
+      <button class="klein" id="gs-nieuw-btn" type="button">+ Grondstof toevoegen</button>
+    </div>
+    <div id="gs-nieuw" style="display:none; border:1px solid #ddd; border-radius:6px; padding:10px; margin-bottom:8px; background:white;">
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:8px; align-items:end;">
+        <div style="grid-column: span 2;"><label for="gs-n-naam">Naam</label><input id="gs-n-naam" type="text" placeholder="bv. Lactose poeder" /></div>
+        <div><label for="gs-n-cnk">CNK (optioneel)</label><input id="gs-n-cnk" type="text" inputmode="numeric" placeholder="leeg = automatisch" /></div>
+        <div><label for="gs-n-type">Type</label><select id="gs-n-type"><option value="actief">Actief</option><option value="supplement">Supplement</option><option value="hulpstof">Hulpstof / verp.</option></select></div>
+        <div><label for="gs-n-prijs">Aankoopprijs (excl. BTW)</label><input id="gs-n-prijs" type="number" step="0.01" min="0" placeholder="0.00" /></div>
+        <div><label for="gs-n-inhoud">Inhoud verpakking</label><input id="gs-n-inhoud" type="number" step="any" min="0" placeholder="bv. 1000" /></div>
+        <div><label for="gs-n-eenheid">Eenheid</label><select id="gs-n-eenheid"><option value="g">g</option><option value="mg">mg</option><option value="ml">ml</option><option value="stuks">stuks</option></select></div>
+        <div><label for="gs-n-korting">Korting (%)</label><input id="gs-n-korting" type="number" step="any" min="0" max="100" placeholder="0" /></div>
+        <div><label for="gs-n-btw">BTW aankoop (%)</label><input id="gs-n-btw" type="number" step="any" min="0" value="21" /></div>
+        <div><label for="gs-n-lev">Leverancier (optioneel)</label><input id="gs-n-lev" type="text" /></div>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button class="primary klein" id="gs-n-opslaan" type="button">Grondstof opslaan</button>
+        <button class="klein" id="gs-n-annuleer" type="button">Annuleren</button>
+      </div>
     </div>
     <div class="gs-scroll"><table class="fact-tabel" id="gs-tabel"><thead><tr>
       <th>Naam</th><th>Verpakking</th><th class="num">Prijs</th><th class="num">Korting</th><th class="num">Netto / eenheid</th><th>Laatste factuur</th><th>Type</th><th></th>
@@ -242,6 +260,7 @@
         <select id="recept-soort">
           <option value="normaal">Gewone bereiding</option>
           <option value="capsules">Capsules (gelules)</option>
+          <option value="supplementen">Supplementen (verdeeld in potjes)</option>
         </select>
       </div>
       <div id="capsule-rij" style="display:none;">
@@ -270,6 +289,7 @@
     <div style="max-width:260px;">
       <label for="recept-cnk">CNK van het EB-product (optioneel)</label>
       <input id="recept-cnk" type="text" inputmode="numeric" placeholder="bv. 1234567" />
+      <div id="recept-cnk-hint" style="font-size:0.75rem; color:#2f6b3f; min-height:1em; margin-top:2px;"></div>
     </div>
 
     <div>
@@ -453,17 +473,26 @@
         const toonHoev = () => {
           hoevInfo.textContent = "";
           const e = String(rij.eenheid || "").trim();
-          eenheidEl.textContent = isCapsules() ? (e.toLowerCase() === "g" ? "mg" : e) : "";
-          if (!isCapsules() || !(Number(rij.hoeveelheid) > 0) || !(aantalGelulesNu() > 0)) return;
-          const tot = hoeveelheidTotaal(rij, { capsules: true, aantalGelules: aantalGelulesNu() });
-          hoevInfo.textContent = `Totaal: ${fmtGetal(tot)} ${rij.eenheid || ""}`;
+          eenheidEl.textContent = isCapsules() ? (e.toLowerCase() === "g" ? "mg" : e) : (isSupplementen() ? (e || "stuks") : "");
+          if (!(Number(rij.hoeveelheid) > 0)) return;
+          const opties = { capsules: isCapsules(), aantalGelules: aantalGelulesNu() };
+          if (isCapsules() && !(aantalGelulesNu() > 0)) return;
+          const delen = [];
+          if (isCapsules()) delen.push(`Totaal: ${fmtGetal(hoeveelheidTotaal(rij, opties))} ${rij.eenheid || ""}`.trim());
+          const kost = isSupplementen() ? 0 : kostIngredientTotaal(rij, opties); // supplementen: één productlijn, kost staat al onderaan
+          if (kost > 0) {
+            delen.push(`${isCapsules() ? "" : "Kost: "}${euroKlein(kost)}`);
+            const eenheden = isCapsules() || isSupplementen() ? 1 : Number(document.getElementById("recept-aantal-eenheden").value) || 1;
+            if (eenheden > 1) delen.push(`${euroKlein(kost / eenheden)} per eenheid`);
+          }
+          hoevInfo.textContent = delen.join(" · ");
         };
         tr.toonHoev = toonHoev;
         const toonInfo = () => {
           infoEl.textContent = "";
           const g = rij.cnk ? grondstoffenPerCnk[rij.cnk] : null;
           if (!g) return;
-          infoEl.append(`🔗 Prijs uit factuur ${g.factuur} (${fmtDatum(g.datum)})${btwAankoop(rij) !== VASTE_BTW_BEREIDING ? ` · BTW ${btwAankoop(rij)}%` : ""}`);
+          infoEl.append(`🔗 ${g.manueel ? "Manueel ingegeven prijs" : "Prijs uit factuur " + g.factuur} (${fmtDatum(g.datum)})${btwAankoop(rij) !== VASTE_BTW_BEREIDING ? ` · BTW ${btwAankoop(rij)}%` : ""}`);
           const b = document.createElement("button");
           b.type = "button"; b.textContent = "ontkoppel";
           b.addEventListener("click", () => { delete rij.cnk; toonInfo(); });
@@ -547,8 +576,12 @@
       document.getElementById("capsule-rij").style.display = cap ? "block" : "none";
       document.getElementById("veld-eenheid-label").style.display = cap ? "none" : "";
       document.getElementById("veld-aantal-eenheden").style.display = cap ? "none" : "";
-      document.getElementById("lbl-verkoopprijs").textContent = cap ? "Verkoopprijs (PP) van de bereiding, incl. BTW" : "Verkoopprijs (PP) per eenheid, incl. BTW";
-      document.getElementById("th-hoeveelheid").textContent = cap ? "Hoeveelheid per gelule (mg)" : "Hoeveelheid in bereiding";
+      const sup = isSupplementen();
+      if (sup) document.getElementById("veld-aantal-eenheden").style.display = "none"; // 1 verpakking per bereiding
+      document.getElementById("lbl-verkoopprijs").textContent = cap ? "Verkoopprijs (PP) van de bereiding, incl. BTW" : (sup ? "Verkoopprijs (PP) per verpakking, incl. BTW" : "Verkoopprijs (PP) per eenheid, incl. BTW");
+      document.getElementById("th-hoeveelheid").textContent = cap ? "Hoeveelheid per gelule (mg)" : (sup ? "Aantal stuks per verpakking" : "Hoeveelheid in bereiding");
+      document.getElementById("recept-eenheid-label").placeholder = sup ? "bv. pot 60 tabletten" : "bv. fles, 20 gel";
+      vulDatalist();
       tekenIngredientenTabel();
       herbereken();
     }
@@ -593,7 +626,7 @@
     function fmtDatum(iso) { return iso ? iso.split("-").reverse().join("/") : ""; }
     // Staat dezelfde stof in dezelfde verpakking bij twee leveranciers (verschillende CNK), dan komt de leverancier in het label.
     function basisLabel(g) { return `${g.naam} (${fmtGetal(g.verpakkingsinhoud)} ${g.eenheid})`; }
-    function leverancierVan(g) { return g.leverancier || "Pharma Chemicals"; }
+    function leverancierVan(g) { return g.leverancier || (g.manueel ? "manueel" : "Pharma Chemicals"); }
     function grondstofLabel(g) {
       const b = basisLabel(g);
       const dubbel = grondstoffen.some((x) => x.cnk !== g.cnk && basisLabel(x).toLowerCase() === b.toLowerCase());
@@ -639,7 +672,9 @@
     function vulDatalist() {
       const dl = document.getElementById("grondstoffen-lijst");
       dl.innerHTML = "";
-      for (const g of grondstoffen.filter((x) => KOPPELBARE_TYPES.includes(x.type))) {
+      // bij een supplementbereiding enkel de supplementen voorstellen (een exacte CNK koppelt altijd)
+      const typeFilter = isSupplementen() ? ["supplement"] : KOPPELBARE_TYPES;
+      for (const g of grondstoffen.filter((x) => typeFilter.includes(x.type))) {
         const o = document.createElement("option");
         o.value = grondstofLabel(g);
         o.label = `${g.cnk} · ${o.value}`; // zoeken op CNK werkt ook
@@ -684,7 +719,7 @@
         td[2].textContent = euro(g.prijs);
         td[3].textContent = g.korting + "%";
         td[4].textContent = `€ ${nettoPerEenheid(g).toLocaleString("nl-BE", { minimumFractionDigits: 4, maximumFractionDigits: 4 })} / ${g.eenheid}`;
-        td[5].textContent = `${fmtDatum(g.datum)} (${g.factuur}) · ${leverancierVan(g)}`;
+        td[5].textContent = g.manueel ? `${fmtDatum(g.datum)} · manueel ingegeven${g.leverancier ? " · " + g.leverancier : ""}` : `${fmtDatum(g.datum)} (${g.factuur}) · ${leverancierVan(g)}`;
         const sel = tr.querySelector("select");
         sel.value = g.type;
         sel.addEventListener("change", async () => {
@@ -697,6 +732,12 @@
             vulDatalist(); tekenGrondstoffen();
           } catch (err) { setStatus("Fout bij wijzigen: " + err.message); }
         });
+        if (g.manueel) {
+          const eb = document.createElement("button");
+          eb.className = "klein"; eb.type = "button"; eb.title = "Bewerken"; eb.textContent = "✎"; eb.style.marginRight = "4px";
+          eb.addEventListener("click", () => gsFormulier(g));
+          tr.querySelector(".danger").before(eb);
+        }
         bevestigKlik(tr.querySelector(".danger"), async () => {
           try {
             const res = await apiFetch(`${API}?resource=grondstoffen&cnk=${g.cnk}`, { method: "DELETE" });
@@ -719,6 +760,43 @@
         } else { clearTimeout(t); actie(); }
       });
     }
+
+    // ---- Grondstof manueel toevoegen of aanpassen ----
+    const GS_VELDEN = ["naam", "cnk", "type", "prijs", "inhoud", "eenheid", "korting", "btw", "lev"];
+    const gsEl = (v) => document.getElementById("gs-n-" + v);
+    function gsFormulier(g) {
+      gsEl("naam").value = g ? g.naam : ""; gsEl("cnk").value = g ? g.cnk : ""; gsEl("cnk").readOnly = !!g;
+      gsEl("type").value = g ? g.type : "actief"; gsEl("prijs").value = g ? g.prijs : "";
+      gsEl("inhoud").value = g ? g.verpakkingsinhoud : ""; gsEl("eenheid").value = g && g.eenheid ? g.eenheid : "g";
+      gsEl("korting").value = g ? g.korting : ""; gsEl("btw").value = g ? (g.btw ?? 21) : 21; gsEl("lev").value = g ? (g.leverancier || "") : "";
+      document.getElementById("gs-nieuw").style.display = "block";
+      gsEl("naam").focus();
+    }
+    function gsSluiten() { document.getElementById("gs-nieuw").style.display = "none"; gsEl("cnk").readOnly = false; }
+    document.getElementById("gs-nieuw-btn").addEventListener("click", () => {
+      if (document.getElementById("gs-nieuw").style.display === "block") gsSluiten(); else gsFormulier(null);
+    });
+    document.getElementById("gs-n-annuleer").addEventListener("click", gsSluiten);
+    document.getElementById("gs-n-opslaan").addEventListener("click", async () => {
+      const w = (v) => gsEl(v).value.trim();
+      const getal = (v) => Number(w(v).replace(",", ".")) || 0;
+      if (!w("naam") || !(getal("prijs") > 0)) { setStatus("Naam en een aankoopprijs groter dan 0 zijn verplicht."); return; }
+      if (!(getal("inhoud") > 0)) { setStatus("Geef de inhoud van de verpakking op (bv. 1000 g)."); return; }
+      const bestaat = w("cnk") && grondstoffenPerCnk[w("cnk")] && !gsEl("cnk").readOnly;
+      if (bestaat && !confirm("Dit CNK bestaat al bij de grondstoffen. Gegevens bijwerken?")) return;
+      const body = { grondstof: { naam: w("naam"), cnk: w("cnk"), type: w("type"), prijs: getal("prijs"), verpakkingsinhoud: getal("inhoud"), eenheid: w("eenheid"), korting: getal("korting"), btw: w("btw") === "" ? 21 : getal("btw"), leverancier: w("lev") } };
+      try {
+        setStatus("Bezig met opslaan...");
+        const res = await apiFetch(`${API}?resource=grondstoffen`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        if (!res.ok) throw new Error(await res.text());
+        const rec = await res.json();
+        gsSluiten();
+        document.getElementById("gs-zoek").value = "";
+        document.getElementById("gs-filter").value = rec.type;
+        await laadGrondstoffen();
+        setStatus("Grondstof opgeslagen.");
+      } catch (err) { setStatus("Opslaan mislukt: " + err.message); }
+    });
     document.getElementById("gs-filter").addEventListener("change", tekenGrondstoffen);
     document.getElementById("gs-zoek").addEventListener("input", tekenGrondstoffen);
 
@@ -853,6 +931,7 @@
     });
 
     // ---- Berekening (zelfde logica als de Excel-bestanden) ----
+    function isSupplementen() { return document.getElementById("recept-soort").value === "supplementen"; }
     function isCapsules() { return document.getElementById("recept-soort").value === "capsules"; }
     function aantalGelulesNu() { return Number(document.getElementById("recept-aantal-gelules").value) || 0; }
     // Gewone bereiding: hoeveelheid = totaal in de bereiding.
@@ -863,17 +942,19 @@
       const perGelule = String(i.eenheid || "").trim().toLowerCase() === "g" ? h / 1000 : h;
       return perGelule * (opties.aantalGelules || 0);
     }
+    // Kost (incl. BTW aankoop en korting) van één ingrediënt voor de volledige bereiding.
+    function kostIngredientTotaal(i, opties) {
+      const prijsPerAankoopEenheid =
+        (Number(i.aankoopprijs) || 0) *
+        (1 + btwAankoop(i) / 100) *
+        (1 - (Number(i.korting) || 0) / 100) /
+        (Number(i.verpakkingsinhoud) || 1);
+      return prijsPerAankoopEenheid * hoeveelheidTotaal(i, opties);
+    }
+    function euroKlein(b) { return "€ " + b.toLocaleString("nl-BE", { minimumFractionDigits: 2, maximumFractionDigits: b < 0.1 ? 4 : 2 }); }
     function berekenAP(aantalEenheden, ingredienten, extraKosten, opties) {
       const eenheden = Number(aantalEenheden) || 1;
-      const kostPerIngredient = ingredienten.map((i) => {
-        const prijsPerAankoopEenheid =
-          (Number(i.aankoopprijs) || 0) *
-          (1 + btwAankoop(i) / 100) *
-          (1 - (Number(i.korting) || 0) / 100) /
-          (Number(i.verpakkingsinhoud) || 1);
-        const kostVoorVolledigeBereiding = prijsPerAankoopEenheid * hoeveelheidTotaal(i, opties);
-        return kostVoorVolledigeBereiding / eenheden;
-      });
+      const kostPerIngredient = ingredienten.map((i) => kostIngredientTotaal(i, opties) / eenheden);
       const kostprijsIngredientenPerEenheid = kostPerIngredient.reduce((a, b) => a + b, 0);
       const extraKostenTotaal = extraKosten.reduce((som, k) => som + (Number(k.bedrag) || 0), 0);
       return kostprijsIngredientenPerEenheid + extraKostenTotaal;
@@ -881,7 +962,7 @@
 
     function herbereken() {
       const verkoopprijs = Number(document.getElementById("recept-verkoopprijs").value) || 0;
-      const aantalEenheden = isCapsules() ? 1 : document.getElementById("recept-aantal-eenheden").value;
+      const aantalEenheden = isCapsules() || isSupplementen() ? 1 : document.getElementById("recept-aantal-eenheden").value;
       const aantalVerkocht = Number(document.getElementById("recept-aantal-verkocht").value) || 0;
       const opties = { capsules: isCapsules(), aantalGelules: aantalGelulesNu() };
       const ap = berekenAP(aantalEenheden, ingredientRijen, extraKostenRijen, opties);
@@ -903,7 +984,10 @@
     }
 
     document.getElementById("recept-verkoopprijs").addEventListener("input", herbereken);
-    document.getElementById("recept-aantal-eenheden").addEventListener("input", herbereken);
+    document.getElementById("recept-aantal-eenheden").addEventListener("input", () => {
+      document.querySelectorAll("#ingredienten-body tr").forEach((tr) => tr.toonHoev && tr.toonHoev());
+      herbereken();
+    });
     document.getElementById("recept-aantal-verkocht").addEventListener("input", herbereken);
     document.getElementById("ingredient-toevoegen-btn").addEventListener("click", () => {
       ingredientRijen.push(nieuweIngredientRij());
@@ -917,6 +1001,7 @@
     function resetFormulier() {
       document.getElementById("recept-naam").value = "";
       document.getElementById("recept-cnk").value = "";
+      document.getElementById("recept-cnk-hint").textContent = "";
       document.getElementById("recept-eenheid-label").value = "";
       document.getElementById("recept-aantal-eenheden").value = "";
       document.getElementById("recept-verkoopprijs").value = "";
@@ -939,7 +1024,7 @@
       const naam = document.getElementById("recept-naam").value.trim();
       const capsulesNu = isCapsules();
       const eenheidLabel = capsulesNu ? `${aantalGelulesNu()} gelules` : document.getElementById("recept-eenheid-label").value.trim();
-      const aantalVerkoopeenheden = capsulesNu ? 1 : document.getElementById("recept-aantal-eenheden").value;
+      const aantalVerkoopeenheden = capsulesNu || isSupplementen() ? 1 : document.getElementById("recept-aantal-eenheden").value;
       const verkoopprijs = document.getElementById("recept-verkoopprijs").value;
       const aantalVerkocht = document.getElementById("recept-aantal-verkocht").value;
       const geldigeIngredienten = ingredientRijen.filter((i) => i.naam.trim());
@@ -949,7 +1034,7 @@
         setStatus("Naam en minstens één ingrediënt (met naam) zijn verplicht.");
         return;
       }
-      const soort = isCapsules() ? "capsules" : "normaal";
+      const soort = isCapsules() ? "capsules" : (isSupplementen() ? "supplementen" : "normaal");
       const aantalGelules = aantalGelulesNu();
       if (soort === "capsules" && aantalGelules < 1) {
         setStatus("Geef het aantal gelules in de bereiding op.");
@@ -982,7 +1067,7 @@
       document.getElementById("recept-aantal-eenheden").value = recept.aantalVerkoopeenheden;
       document.getElementById("recept-verkoopprijs").value = recept.verkoopprijs;
       document.getElementById("recept-aantal-verkocht").value = recept.aantalVerkocht || "";
-      document.getElementById("recept-soort").value = recept.soort === "capsules" ? "capsules" : "normaal";
+      document.getElementById("recept-soort").value = ["capsules", "supplementen"].includes(recept.soort) ? recept.soort : "normaal";
       document.getElementById("recept-aantal-gelules").value = recept.aantalGelules || "";
       ingredientRijen = recept.ingredienten.map((i) => ({ ...i }));
       extraKostenRijen = (recept.extraKosten || []).map((k) => ({ ...k }));
@@ -1063,7 +1148,7 @@
         el.querySelector(".recept-naam").textContent = recept.naam + (recept.eenheidLabel && recept.soort !== "capsules" ? ` (${recept.eenheidLabel})` : "");
         el.querySelector(".recept-winst").textContent = "Winst/verpakking: " + euro(winstPerEenheid);
         el.querySelector(".recept-detail").textContent =
-          `${recept.soort === "capsules" ? `capsules (${recept.aantalGelules} gelules) · ` : ""}${recept.cnk ? `CNK ${recept.cnk} · ` : ""}${recept.ingredienten.length} ingrediënt(en) · AP ${euro(ap)} · PP ${euro(recept.verkoopprijs)} incl. BTW` +
+          `${recept.soort === "capsules" ? `capsules (${recept.aantalGelules} gelules) · ` : ""}${recept.soort === "supplementen" ? "supplement (verdeeld) · " : ""}${recept.cnk ? `CNK ${recept.cnk} · ` : ""}${recept.ingredienten.length} ingrediënt(en) · AP ${euro(ap)} · PP ${euro(recept.verkoopprijs)} incl. BTW` +
           (recept.aantalVerkocht ? ` · ${recept.aantalVerkocht} verkocht · totale winst ${euro(totaleWinst)}` : "") +
           (recept.bijgewerkt || recept.aangemaakt ? ` · laatst bijgewerkt ${new Date(recept.bijgewerkt || recept.aangemaakt).toLocaleDateString("nl-BE")}` : "");
         el.querySelector(".bewerk-btn").addEventListener("click", () => bewerkRecept(recept));
@@ -1319,6 +1404,27 @@
       document.body.classList.add("rapport-printen");
       window.addEventListener("afterprint", () => document.body.classList.remove("rapport-printen"), { once: true });
       window.print();
+    });
+
+    // CNK ingeven bij een nieuwe bereiding: staat het in de lijst Verkoopprijzen, dan worden naam en verkoopprijs overgenomen.
+    // Velden die je zelf al hebt ingevuld (en dus niet door deze koppeling) blijven ongemoeid.
+    let cnkAutoNaam = null, cnkAutoPrijs = null;
+    document.getElementById("recept-cnk").addEventListener("input", async (e) => {
+      const hint = document.getElementById("recept-cnk-hint");
+      const cnk = e.target.value.trim();
+      hint.textContent = "";
+      if (!/^\d{6,7}$/.test(cnk)) return;
+      if (!vpGeladen) await laadVerkoopprijzen();
+      if (document.getElementById("recept-cnk").value.trim() !== cnk) return; // ondertussen gewijzigd
+      const r = vpRijen.find((x) => x.cnk === cnk);
+      if (!r) return;
+      const naamEl = document.getElementById("recept-naam");
+      const prijsEl = document.getElementById("recept-verkoopprijs");
+      const gedaan = [];
+      if (r.naam && (!naamEl.value.trim() || naamEl.value === cnkAutoNaam)) { naamEl.value = r.naam; cnkAutoNaam = r.naam; gedaan.push("naam"); }
+      if (vpHeeftPrijs(r) && (prijsEl.value === "" || prijsEl.value === cnkAutoPrijs)) { prijsEl.value = r.prijs; cnkAutoPrijs = String(r.prijs); gedaan.push("verkoopprijs"); }
+      herbereken();
+      hint.textContent = `✓ Gevonden in Verkoopprijzen: ${r.naam}` + (gedaan.length ? ` (${gedaan.join(" en ")} overgenomen)` : "");
     });
     const vpNieuwVelden = ["naam", "cnk", "prijs", "2026", "2025", "2024"];
     function vpNieuwSluiten() {
